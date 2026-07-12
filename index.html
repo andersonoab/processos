@@ -154,11 +154,12 @@ body.sem-dados #empty{display:block}
   <span class="brand">Leitor de Processos Trabalhistas</span>
   <span class="sub" id="hSub">Sonova Brasil</span>
   <span class="sp"></span>
-  <button class="hbtn" onclick="document.getElementById('fileIn').click()">Importar planilha</button>
+  <button class="hbtn" onclick="document.getElementById('fileIn').click()">Ler Excel</button>
+  <button class="hbtn" onclick="baixarTemplate()">Baixar template</button>
   <button class="hbtn" onclick="exportar()">Exportar Excel</button>
   <button class="hbtn" onclick="window.print()">Imprimir</button>
-  <button class="hbtn" id="btnReset" onclick="resetStore()" title="Apaga as planilhas importadas e volta às bases originais">Resetar dados</button>
-  <input type="file" id="fileIn" accept=".xlsx,.xls,.xlsm" style="display:none">
+  <button class="hbtn" id="btnReset" onclick="resetStore()" title="Limpa os arquivos e dados carregados nesta sessão">Resetar dados</button>
+  <input type="file" id="fileIn" accept=".xlsx,.xls,.xlsm,.xlsb" multiple style="display:none">
 </header>
 
 <aside>
@@ -171,7 +172,7 @@ body.sem-dados #empty{display:block}
     </div>
   </div>
   <div class="fgroup"><label>Fonte (relatório)</label><select id="fFonte"><option value="">Todas</option></select></div>
-  <div class="fgroup"><label>Situação</label><select id="fStatus"><option value="Ativo">Ativos</option><option value="Arquivado">Arquivados</option><option value="">Todos</option></select></div>
+  <div class="fgroup"><label>Situação</label><select id="fStatus"><option value="">Todos</option></select></div>
   <div class="fgroup"><label>Prognóstico</label><select id="fProg"><option value="">Todos</option></select></div>
   <div class="fgroup"><label>Empresa reclamada</label><select id="fEmp"><option value="">Todas</option></select></div>
   <div class="fgroup"><label>Fase processual</label><select id="fFase"><option value="">Todas</option></select></div>
@@ -212,10 +213,10 @@ body.sem-dados #empty{display:block}
   <section class="pane on" id="p1">
     <div class="card" id="empty">
       <div class="big">Nenhum dado carregado</div>
-      <div class="cs">A memória e o armazenamento do navegador estão zerados. Nada é calculado nem exibido até que uma planilha seja importada.</div>
+      <div class="cs">O leitor não contém base interna e não salva dados no navegador. Nada é calculado até que um ou mais arquivos Excel sejam selecionados.</div>
       <div class="zone" id="zone" onclick="document.getElementById('fileIn').click()">
         <div style="font-size:15px;margin-bottom:4px"><b>Clique aqui ou arraste a planilha</b></div>
-        <div style="font-size:12.5px">Aceita os dois formatos: relatório trabalhista do escritório (uma linha por processo) e relatório mensal de contingenciamento (blocos com série mensal).</div>
+        <div style="font-size:12.5px">O leitor examina todas as linhas, colunas e abas. Reconhece tabelas, histórico mensal em linhas e blocos mensais em colunas.</div>
       </div>
       <div id="emptyRestore"></div>
     </div>
@@ -329,14 +330,15 @@ body.sem-dados #empty{display:block}
         <div class="txt" id="metOrigem"></div>
       </div>
       <div class="sec">
-        <h4>Layouts que o leitor reconhece</h4>
-        <div class="txt">Layout escritório (Relatório Trabalhista): uma linha por processo. Colunas de Valor da Causa e três faixas de risco (Remoto, Possível, Provável), além de andamento, condenação e garantia. Sem histórico mensal.
+        <h4>Leitura flexível das planilhas</h4>
+        <div class="txt">O leitor percorre todas as abas, linhas e colunas do arquivo. Não limita a busca às primeiras linhas e não exige posição fixa para Reclamante, Processo, Pedidos, valores ou datas.
 
-Layout mensal (Relatório de Contingenciamento): cada processo é um bloco, com um pedido por linha, e o tempo corre na horizontal — um par de colunas por mês (Possibilidade de perda e Valor envolvido atualizado). Quatro faixas: Remoto, Possível abaixo de 50%, Possível acima de 50% e Provável. Traz série histórica completa.
+A identificação é feita pelo conjunto de cabeçalhos encontrados e pelo conteúdo das colunas. São reconhecidos três formatos:
+1. Tabela de processos: uma linha por processo, com colunas em qualquer ordem.
+2. Histórico mensal em linhas: uma linha por processo, pedido e competência.
+3. Blocos mensais em colunas: um processo por bloco e os meses distribuídos horizontalmente.
 
-A detecção é automática, aba por aba: se o cabeçalho tem Possibilidade de perda, é layout mensal; se tem Valor da Causa ou Risco Econômico, é layout escritório.
-
-As duas réguas não são iguais e não são fundidas. O layout escritório não tem a faixa Possível acima de 50%; o layout mensal não tem valor da causa. Cada indicador soma apenas o que existe na origem, e o filtro Fonte permite isolar um relatório de cada vez.</div>
+Cabeçalhos desconhecidos não são descartados. Eles ficam preservados em Colunas adicionais. Quando a estrutura não possui campos mínimos de identificação, a aba é listada no diagnóstico como não reconhecida, sem inventar dados.</div>
       </div>
       <div class="sec">
         <h4>Regras de classificação contábil</h4>
@@ -347,12 +349,12 @@ Remoto: chance remota de perda. Não se provisiona nem se divulga.
 Provisão sugerida: o relatório mensal adota Provável mais Possível acima de 50%, e é esse o critério usado no indicador. No layout escritório, onde não existe a faixa acima de 50%, a provisão sugerida equivale ao Provável.</div>
       </div>
       <div class="sec">
-        <h4>Armazenamento e reset</h4>
-        <div class="txt">As duas planilhas originais estão embutidas neste arquivo e são lidas pelo mesmo parser da importação — base embutida e base importada não podem divergir.
+        <h4>Dados, template e reset</h4>
+        <div class="txt">O HTML não contém planilhas, processos, valores ou arquivos em Base64. Os dados ficam somente na memória da página enquanto ela estiver aberta.
 
-Ao importar uma planilha, o resultado fica salvo no navegador (localStorage) e passa a ser carregado automaticamente na próxima abertura. Importar novamente o mesmo nome de arquivo substitui aquela fonte; importar um nome diferente acrescenta uma fonte nova.
+O botão Baixar template gera um Excel padronizado para envio a outros escritórios, com as abas Processos, Histórico Mensal, Instruções e Dicionário de Campos.
 
-O botão Resetar dados apaga o que está salvo no navegador e volta às bases originais. Nenhum arquivo Excel do seu computador é alterado. Se o navegador bloquear o armazenamento, o leitor continua funcionando apenas em memória e avisa na barra lateral.</div>
+O botão Resetar dados elimina os arquivos carregados, filtros, gráficos e registros da sessão. Recarregar ou fechar a página também elimina os dados.</div>
       </div>
       <div class="sec">
         <h4>Heurísticas declaradas</h4>
@@ -363,8 +365,8 @@ O botão Resetar dados apaga o que está salvo no navegador e volta às bases or
 5. Regional: extraída do campo Foro pelo padrão "TRT Nª Região".</div>
       </div>
       <div class="sec">
-        <h4>Abas não processadas</h4>
-        <div class="txt">Atualização Proc. Adm. e Atualização MS 0003804: abas de natureza tributária (crédito presumido, processos administrativos), com fórmulas quebradas (#REF!) nas colunas de juros e valor atualizado. Não são passivo trabalhista e foram deliberadamente excluídas dos indicadores. Se precisarem entrar, a planilha de origem precisa ser corrigida primeiro — os valores atualizados hoje não existem, só o principal.</div>
+        <h4>Abas não reconhecidas</h4>
+        <div class="txt">Uma aba só é ignorada quando não apresenta campos mínimos para identificar processos ou histórico mensal. O diagnóstico da importação informa a aba, o melhor cabeçalho encontrado, as colunas reconhecidas e o motivo da rejeição. Abas auxiliares, sumários e demonstrativos permanecem fora da carteira para evitar duplicidade.</div>
       </div>
     </div>
   </section>
@@ -376,13 +378,9 @@ O botão Resetar dados apaga o que está salvo no navegador e volta às bases or
 
 <script>
 /* =========================================================
-   LEITOR DE PROCESSOS TRABALHISTAS - SONOVA
-   Base embutida: relatório de 08/07/2026
+   LEITOR FLEXÍVEL DE PROCESSOS TRABALHISTAS
+   Aplicação sem base interna e sem persistência no navegador.
    ========================================================= */
-/* Planilhas originais embutidas em base64. São lidas pelo MESMO parser usado na importação,
-   o que garante que base embutida e base importada nunca divergem. */
-const EMBUTIDAS = {};
-const LSKEY = 'leitor_proc_sonova_v1';
 
 const C = {p:'#0083CA',dk:'#003C64',md:'#005A64',lt:'#6EB4DC',ac:'#7D0041',ac2:'#8C321E',tx:'#333333',mu:'#646464',bd:'#CCCCCC'};
 const CORPROG = {
@@ -420,6 +418,7 @@ function parseNum(v){
 function parseData(v){
   if(v==null||v==='') return null;
   if(v instanceof Date) return v;
+  if(typeof v==='number' && v>20000 && v<100000) return new Date(Date.UTC(1899,11,30)+Math.round(v)*864e5);
   const s=String(v).trim();
   if(/^(ativo|n\/a|-)$/i.test(s)) return null;
   let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -463,13 +462,11 @@ function classificarPedidos(txt){
 
 /* ---------- normalização de registro ---------- */
 function empresaCurta(s){
-  const t=norm(s); const has=[];
-  if(/sonova/.test(t)) has.push('Sonova');
-  if(/a&r|a & r|aparelhos auditivos/.test(t)) has.push('A&R');
-  if(/bf comercio/.test(t)) has.push('BF Comércio');
-  if(/juiz da|vara do trabalho/.test(t) && !has.length) has.push('Mandado de segurança');
-  if(!has.length) return String(s||'-').split(/\s+/).slice(0,3).join(' ');
-  return has.join(' + ');
+  const original=String(s||'').replace(/\s+/g,' ').trim();
+  if(!original) return 'Não informada';
+  const primeira=original.split(/\n|;|\s+e\s+(?=[A-ZÁÉÍÓÚÇ])/i)[0].trim();
+  const limpa=primeira.replace(/\b(LTDA\.?|S\.?A\.?|EIRELI|ME|EPP)\b/gi,'').replace(/\s{2,}/g,' ').trim();
+  return (limpa||primeira).split(/\s+/).slice(0,6).join(' ');
 }
 function trtDe(foro){ const m=String(foro||'').match(/TRT\s*(\d+)/i); return m?('TRT '+m[1]):'Não informada'; }
 /* número CNJ: NNNNNNN-DD.AAAA.5.TR.OOOO -> TR é o tribunal regional do trabalho */
@@ -504,10 +501,13 @@ function normalizar(r,i){
   const o={...r};
   o.id=i;
   o.extras=r.extras||{};
-  o.status=r.status || (r.arquivamento?'Arquivado':'Ativo');
+  const st=String(r.status||'').trim();
+  o.status = /arquiv|encerr|baixad|finaliz/i.test(st) ? 'Arquivado'
+    : /ativ|andamento|abert|pendente/i.test(st) ? 'Ativo'
+    : (r.arquivamento ? 'Arquivado' : (st || 'Não informado'));
   o.reclamante=String(r.reclamante||'(sem identificação)').trim();
   o.cpj=String(r.cpj||'-').trim();
-  o.reclamada=String(r.reclamada||'-').trim();
+  o.reclamada=String(r.reclamada||'Não informada').trim();
   o.cargo=String(r.cargo||'N/A').trim();
   o.fase=String(r.fase||'Não informada').trim();
   o.foro=String(r.foro||'').trim();
@@ -520,7 +520,10 @@ function normalizar(r,i){
   o.rPos50=parseNum(r.riscoPossivel50); o.rPro=parseNum(r.riscoProvavel);
   o.rTot=parseNum(r.riscoTotal) || (o.rRem+o.rPos+o.rPos50+o.rPro);
   o.prov=o.rPro+o.rPos50; // provisão sugerida: provável + possível acima de 50%
-  o.prog=String(r.prognostico||'').toUpperCase().trim() || 'NÃO CLASSIFICADO';
+  o.prog=String(r.prognostico||'').toUpperCase().trim();
+  if(!o.prog){
+    o.prog=o.rPro>0?'PROVÁVEL':o.rPos50>0?'POSSÍVEL (>50%)':o.rPos>0?'POSSÍVEL (<50%)':o.rRem>0?'REMOTO':'NÃO CLASSIFICADO';
+  }
   o.fonte=String(r.fonte||'-');
   o.layout=r.layout||'A';
   o.serie=r.serie||null;
@@ -589,33 +592,15 @@ const COLS=[
 ];
 
 /* ---------- boot ---------- */
-function b64ToBuf(b64){
-  const bin=atob(b64); const len=bin.length; const buf=new Uint8Array(len);
-  for(let i=0;i<len;i++) buf[i]=bin.charCodeAt(i);
-  return buf.buffer;
-}
-function carregarEmbutidas(){
-  RAW=[]; FONTES=[];
-  const mapeadas=new Set(),novas=new Set(),abas=[],ignoradas=[];
-  Object.entries(EMBUTIDAS).forEach(([nome,b64])=>{
-    const res=parseWorkbook(b64ToBuf(b64),nome);
-    RAW.push(...res.rows); FONTES.push(...res.fontes);
-    res.info.mapeadas.forEach(x=>mapeadas.add(x));
-    res.info.novas.forEach(x=>novas.add(x));
-    res.info.abas.forEach(x=>abas.push(nome+' › '+x));
-    res.info.ignoradas.forEach(x=>ignoradas.push(nome+' › '+x));
-  });
-  COLINFO={mapeadas:[...mapeadas],novas:[...novas],abas,ignoradas,arquivo:'bases embutidas'};
-  marcarStore('bases originais embutidas no arquivo');
-}
 function atualizarCabecalho(){
   const fs=[...new Set(RAW.map(r=>r.fonte))];
   const h=document.getElementById('hSub');
   h.textContent = RAW.length
-    ? 'Sonova Brasil · '+RAW.length+' processos · '+fs.length+' relatório(s)'
+    ? 'Sonova Brasil · '+RAW.length+' processos · '+fs.length+' arquivo(s)'
     : 'Sonova Brasil · nenhum dado carregado';
   document.getElementById('sigBase').textContent = fs.join(' + ') || 'nenhuma';
 }
+function marcarStore(txt){ const el=document.getElementById('sigStore'); if(el) el.textContent=txt; }
 function render(){
   const vazio = !TODOS.length;
   document.body.classList.toggle('sem-dados',vazio);
@@ -623,28 +608,14 @@ function render(){
     destroy();
     document.getElementById('kpis').innerHTML='';
     document.getElementById('bAl').textContent='0';
-    document.getElementById('emptyRestore').innerHTML = zerado()
-      ? '<div class="note">Se quiser trazer de volta as duas bases originais que acompanham este arquivo, <button class="lnk" onclick="restaurarEmbutidas()">clique aqui para restaurá-las</button>.</div>'
-      : '';
+    document.getElementById('emptyRestore').innerHTML='<div class="note">Use <b>Baixar template</b> para enviar um modelo padronizado a outro escritório.</div>';
     return;
   }
   renderKpis(); renderMini(); renderTabela(); renderCharts(); renderEvolucao(); renderAlertas(); renderCausaRaiz(); renderMetodologia();
 }
 function boot(){
-  const saved=loadStore();
-  if(saved && saved.raw && saved.raw.length){
-    RAW=saved.raw; FONTES=saved.fontes||[]; COLINFO=saved.colinfo||COLINFO;
-    marcarStore('lendo dados importados em '+new Date(saved.ts).toLocaleString('pt-BR'));
-  }else if(zerado()){
-    Object.keys(EMBUTIDAS).forEach(k=>{ delete EMBUTIDAS[k]; }); // bases embutidas não são carregadas
-    RAW=[]; FONTES=[];
-    marcarStore('estado zerado: nenhuma base carregada');
-  }else if(Object.keys(EMBUTIDAS).length){
-    carregarEmbutidas();
-  }else{
-    marcarStore('arquivo sem base embutida: importe uma planilha');
-  }
-  TODOS=RAW.map(normalizar);
+  RAW=[]; FONTES=[]; TODOS=[];
+  marcarStore('dados somente na memória desta página');
   atualizarCabecalho();
   popularFiltros();
   ['fBusca','fFonte','fStatus','fProg','fEmp','fFase','fTrt','fPed'].forEach(id=>{
@@ -662,8 +633,8 @@ function boot(){
   ['dragenter','dragover'].forEach(e=>z.addEventListener(e,ev=>{ev.preventDefault();z.classList.add('hot');}));
   ['dragleave','drop'].forEach(e=>z.addEventListener(e,ev=>{ev.preventDefault();z.classList.remove('hot');}));
   z.addEventListener('drop',ev=>{
-    const f=ev.dataTransfer.files&&ev.dataTransfer.files[0];
-    if(f) importar({target:{files:[f],value:''}});
+    const files=ev.dataTransfer.files;
+    if(files&&files.length) importar({target:{files,value:''}});
   });
   aplicar();
 }
@@ -672,6 +643,7 @@ function popularFiltros(){
   const fill=(id,arr)=>{const s=document.getElementById(id);const v=s.value;
     s.innerHTML=s.options[0].outerHTML+arr.map(x=>`<option>${esc(x)}</option>`).join(''); s.value=v;};
   fill('fFonte',u(0,r=>r.fonte));
+  fill('fStatus',u(0,r=>r.status));
   fill('fProg',u(0,r=>r.prog));
   fill('fEmp',u(0,r=>r.empresa));
   fill('fFase',u(0,r=>r.fase));
@@ -680,7 +652,7 @@ function popularFiltros(){
 }
 function limparFiltros(){
   document.getElementById('fBusca').value='';
-  document.getElementById('fStatus').value='Ativo';
+  document.getElementById('fStatus').value='';
   ['fFonte','fProg','fEmp','fFase','fTrt','fPed'].forEach(i=>document.getElementById(i).value='');
   KPISEL=null; aplicar();
 }
@@ -1122,33 +1094,28 @@ function renderMetodologia(){
   const ativos=TODOS.filter(r=>r.status==='Ativo'), arq=TODOS.filter(r=>r.status==='Arquivado');
   document.getElementById('metOrigem').textContent=
 `Fontes carregadas: ${[...new Set(TODOS.map(r=>r.fonte))].join(' | ')||'-'}
-Processos ativos: ${ativos.length} · arquivados/encerrados: ${arq.length}
+Processos: ${TODOS.length} · ativos: ${ativos.length} · arquivados/encerrados: ${arq.length} · sem status explícito: ${TODOS.filter(r=>r.status==='Não informado').length}
 
-Valor da causa = coluna "Valor da Causa" (pedido do reclamante).
-Risco econômico = coluna "Risco Econômico" (total), que corresponde à soma de Remoto + Possível + Provável.
-Prognóstico = coluna "Prognóstico" do escritório.
-Garantias = valores em R$ extraídos do campo "Garantia" (depósito recursal, custas, execução).
-Regional = extraída do campo "Foro".
-Pedidos = classificados por dicionário sobre o campo "Objeto".
+Os valores são lidos das colunas efetivamente reconhecidas no Excel. O leitor não presume empresa pela aba e não transforma risco zero em processo arquivado.
 
-Conferência da base ativa:
-  Remoto ............. ${brl(S(ativos,'rRem'))}
-  Possível (<50%) .... ${brl(S(ativos,'rPos'))}
-  Possível (>50%) .... ${brl(S(ativos,'rPos50'))}
-  Provável ........... ${brl(S(ativos,'rPro'))}
-  Total .............. ${brl(S(ativos,'rTot'))}
-  Provisão sugerida .. ${brl(S(ativos,'prov'))}
-  Valor da causa ..... ${brl(S(ativos,'vc'))}
-  Garantias .......... ${brl(S(ativos,'gar'))}
+Conferência da seleção ativa:
+  Remoto ............. ${brl(S(FILT,'rRem'))}
+  Possível (<50%) .... ${brl(S(FILT,'rPos'))}
+  Possível (>50%) .... ${brl(S(FILT,'rPos50'))}
+  Provável ........... ${brl(S(FILT,'rPro'))}
+  Total .............. ${brl(S(FILT,'rTot'))}
+  Provisão sugerida .. ${brl(S(FILT,'prov'))}
+  Valor da causa ..... ${brl(S(FILT,'vc'))}
+  Garantias .......... ${brl(S(FILT,'gar'))}
 
-LEITURA DE COLUNAS
-${COLINFO.arquivo?('Arquivo importado: '+COLINFO.arquivo):'Base embutida (sem importação nesta sessão).'}
-${COLINFO.abas?('Abas lidas: '+COLINFO.abas.join(', ')):''}
-${COLINFO.ignoradas&&COLINFO.ignoradas.length?('Abas ignoradas (sem coluna Reclamante): '+COLINFO.ignoradas.join(', ')):''}
-${COLINFO.mapeadas&&COLINFO.mapeadas.length?('Colunas reconhecidas: '+COLINFO.mapeadas.join(' | ')):''}
-${COLINFO.novas&&COLINFO.novas.length?('Colunas novas preservadas: '+COLINFO.novas.join(' | ')):(COLINFO.arquivo?'Nenhuma coluna nova encontrada.':'')}
+DIAGNÓSTICO DE LEITURA
+${COLINFO.arquivo?('Arquivo(s): '+COLINFO.arquivo):'Nenhum arquivo carregado.'}
+${COLINFO.abas&&COLINFO.abas.length?('Abas lidas: '+COLINFO.abas.join(' | ')):''}
+${COLINFO.ignoradas&&COLINFO.ignoradas.length?('Abas não reconhecidas: '+COLINFO.ignoradas.join(' | ')):''}
+${COLINFO.mapeadas&&COLINFO.mapeadas.length?('Cabeçalhos reconhecidos: '+COLINFO.mapeadas.join(' | ')):''}
+${COLINFO.novas&&COLINFO.novas.length?('Colunas adicionais preservadas: '+COLINFO.novas.join(' | ')):'Nenhuma coluna adicional identificada.'}
 
-O leitor não depende da posição das colunas, apenas dos nomes. Coluna ausente vira valor vazio; coluna nova é preservada na ficha, na busca e na exportação; coluna renomeada para um sinônimo conhecido (por exemplo Vara no lugar de Foro) continua sendo reconhecida.`;
+A análise percorre a área utilizada completa de cada aba. O cabeçalho é escolhido por pontuação do conjunto de campos, e não por posição fixa. Para arquivos de outros escritórios, o template reduz ambiguidades e mantém o histórico mensal em formato padronizado.`;
 }
 
 /* ---------- ficha ---------- */
@@ -1243,278 +1210,379 @@ function fecharFicha(){ document.getElementById('ov').classList.remove('on'); do
 document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharFicha();});
 
 /* ---------- import / export ---------- */
-/* Mapa de colunas conhecidas. Sinônimos aceitos para o mesmo destino.
-   Qualquer coluna FORA deste mapa não é descartada: vai para r.extras,
-   aparece na ficha, na busca livre e na exportação. Colunas ausentes viram vazio. */
-const MAPA={
-  'cpj':'cpj','pasta':'cpj','codigo':'cpj','codigo cpj':'cpj',
-  'reclamante':'reclamante','autor':'reclamante','parte':'reclamante',
-  'natureza da acao':'natureza','natureza':'natureza',
-  'reclamada':'reclamada','empresa':'reclamada','reclamada(s)':'reclamada',
-  'terceiro':'terceiro','tomador':'terceiro','prestador':'terceiro',
-  'cargo':'cargo','funcao':'cargo',
-  'data admissao':'admissao','admissao':'admissao','data de admissao':'admissao',
-  'data demissao':'demissao','demissao':'demissao','data de demissao':'demissao','data de desligamento':'demissao',
-  'fase processual':'fase','fase':'fase',
-  'data da distribuicao':'distribuicao','data de distribuicao':'distribuicao','distribuicao':'distribuicao','data do ajuizamento':'distribuicao',
-  'numero do processo':'processo','no do processo':'processo','n do processo':'processo','processo':'processo',
-  'ordinal da jurisdicao':'ordinal','ordinal':'ordinal',
-  'jurisdicao':'jurisdicao','foro':'foro','vara':'foro','comarca':'foro',
-  'objeto':'objeto','pedidos':'objeto',
-  'valor da causa':'valorCausa','valor causa':'valorCausa',
-  'risco economico - remoto':'riscoRemoto','risco remoto':'riscoRemoto','remoto':'riscoRemoto',
-  'risco economico - possivel':'riscoPossivel','risco possivel':'riscoPossivel','possivel':'riscoPossivel',
-  'risco economico - provavel':'riscoProvavel','risco provavel':'riscoProvavel','provavel':'riscoProvavel',
-  'risco economico':'riscoTotal','risco economico total':'riscoTotal','risco total':'riscoTotal',
-  'prognostico':'prognostico','prognostico de perda':'prognostico',
-  'andamento':'andamento','andamentos':'andamento','historico':'andamento',
-  'condencao':'condenacao','condenacao':'condenacao',
-  'garantia':'garantia','garantias':'garantia','deposito recursal':'garantia',
-  'data de arquivamento':'arquivamento','data do arquivamento':'arquivamento','arquivamento':'arquivamento',
-  'situacao':'status','status':'status'
+/* Dicionário amplo de campos. A análise usa a planilha inteira e escolhe o cabeçalho
+   com maior combinação de campos, sem exigir linha ou posição fixa. */
+const ALIASES={
+  cpj:['cpj','pasta','codigo cpj','codigo interno','id do caso','id caso','case id','referencia interna'],
+  reclamante:['reclamante','autor','autora','parte autora','nome do reclamante','empregado','colaborador','ex empregado'],
+  natureza:['natureza','natureza da acao','tipo de acao','classe processual'],
+  reclamada:['reclamada','reclamado','empresa reclamada','parte re','reu','cliente','empresa','razao social'],
+  terceiro:['terceiro','tomador','prestador','responsavel subsidiario','litisconsorte'],
+  cargo:['cargo','funcao','funcao exercida','posto','ocupacao'],
+  departamento:['departamento','depto','area','setor','unidade','filial'],
+  admissao:['admissao','data admissao','data de admissao','inicio do contrato'],
+  demissao:['demissao','data demissao','data de demissao','data de desligamento','desligamento','fim do contrato'],
+  fase:['fase','fase processual','etapa processual','status processual'],
+  distribuicao:['distribuicao','data distribuicao','data da distribuicao','data de distribuicao','ajuizamento','data do ajuizamento'],
+  processo:['processo','numero do processo','n do processo','nº processo','processo cnj','numero cnj'],
+  ordinal:['ordinal','ordinal da jurisdicao','numero da vara'],
+  jurisdicao:['jurisdicao','justica','orgao julgador'],
+  foro:['foro','vara','comarca','tribunal','regional','trt','localidade'],
+  objeto:['objeto','pedido','pedidos','verba','verbas','assunto','causa de pedir','descricao do pedido'],
+  valorCausa:['valor da causa','valor causa','valor atribuido a causa'],
+  riscoRemoto:['risco remoto','risco economico remoto','valor remoto','remoto'],
+  riscoPossivel:['risco possivel','risco economico possivel','risco possivel <50%','risco possível (<50%)','possivel menor 50','possivel <50','possivel abaixo de 50'],
+  riscoPossivel50:['risco possivel >50%','risco possível (>50%)','possivel maior 50','possivel >50','possivel acima de 50','risco possivel acima de 50'],
+  riscoProvavel:['risco provavel','risco economico provavel','valor provavel','provavel'],
+  riscoTotal:['risco economico','risco economico total','risco total','exposicao total','contingencia total','valor envolvido total'],
+  prognostico:['prognostico','prognostico de perda','classificacao de risco','probabilidade','chance de perda'],
+  andamento:['andamento','andamentos','historico','historico processual','ultima movimentacao','movimentacao','status atual'],
+  condenacao:['condenacao','decisao','sentenca','resultado'],
+  garantia:['garantia','garantias','deposito recursal','depositos','custas','valor depositado'],
+  arquivamento:['arquivamento','data de arquivamento','data do arquivamento','data encerramento'],
+  status:['situacao','status','situacao do processo','processo ativo','ativo arquivado'],
+  mesReferencia:['mes de referencia','mes referencia','competencia','periodo de referencia','data base','data-base'],
+  possibilidadePerda:['possibilidade de perda','probabilidade de perda','faixa de risco','classificacao mensal','prognostico mensal'],
+  valorAtualizado:['valor envolvido atualizado','valor envolvido','valor atualizado','exposicao atualizada','contingencia atualizada'],
+  dataStatus:['data do status','data status','ultima atualizacao','data da atualizacao'],
+  responsavel:['responsavel','advogado responsavel','escritorio','responsavel pelo caso']
 };
-const MESRE=/^(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+\d{4}$/;
+const MAPA_EXATO={};
+Object.entries(ALIASES).forEach(([k,arr])=>arr.forEach(a=>MAPA_EXATO[normCab(a)]=k));
+const CAMPOS_CHAVE=new Set(['reclamante','processo','cpj']);
+const CAMPOS_FIN=new Set(['valorCausa','riscoRemoto','riscoPossivel','riscoPossivel50','riscoProvavel','riscoTotal','prognostico','valorAtualizado','possibilidadePerda']);
+const MESES=['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+function normCab(v){
+  return norm(v).replace(/[º°ª]/g,'').replace(/[^a-z0-9<>%]+/g,' ').replace(/\s+/g,' ').trim();
+}
+function mapearCabecalho(v){
+  const n=normCab(v); if(!n) return null;
+  if(MAPA_EXATO[n]) return MAPA_EXATO[n];
+  const nt=n.split(' ').filter(Boolean);
+  if(n.length>90||nt.length>12) return null; // texto de andamento não pode virar cabeçalho
+  let melhor=null,score=0;
+  Object.entries(ALIASES).forEach(([k,arr])=>arr.forEach(a=>{
+    const x=normCab(a),xt=x.split(' ').filter(Boolean); let s=0;
+    if(n===x) s=100;
+    else if(xt.length>=2 && x.length>=7 && (n.includes(x)||x.includes(n))) s=75-Math.abs(n.length-x.length)*.3;
+    else{
+      const an=new Set(nt.filter(t=>t.length>2));
+      const ax=new Set(xt.filter(t=>t.length>2));
+      const inter=[...an].filter(t=>ax.has(t)).length;
+      const uniao=new Set([...an,...ax]).size||1;
+      s=(inter/uniao)*65;
+    }
+    if(s>score){score=s;melhor=k;}
+  }));
+  return score>=50?melhor:null;
+}
+function mesInfo(v){
+  if(v instanceof Date && !isNaN(v)) return {label:MESES[v.getMonth()][0].toUpperCase()+MESES[v.getMonth()].slice(1)+' '+v.getFullYear(),key:v.getFullYear()*12+v.getMonth()};
+  const n=normCab(v); if(!n) return null;
+  let m=n.match(/^(\d{1,2})[\/\-.](\d{2,4})$/);
+  if(m){let mm=+m[1],aa=+m[2];if(aa<100)aa+=2000;if(mm>=1&&mm<=12)return {label:MESES[mm-1][0].toUpperCase()+MESES[mm-1].slice(1)+' '+aa,key:aa*12+mm-1};}
+  m=n.match(/^(\d{4})[\/\-.](\d{1,2})(?:[\/\-.]\d{1,2})?$/);
+  if(m){let aa=+m[1],mm=+m[2];if(mm>=1&&mm<=12)return {label:MESES[mm-1][0].toUpperCase()+MESES[mm-1].slice(1)+' '+aa,key:aa*12+mm-1};}
+  const nomes='(janeiro|jan|fevereiro|fev|marco|mar|abril|abr|maio|mai|junho|jun|julho|jul|agosto|ago|setembro|set|outubro|out|novembro|nov|dezembro|dez)';
+  m=n.match(new RegExp('^'+nomes+'[ \/-]+(\\d{2,4})$'));
+  if(m){let aa=+m[2];if(aa<100)aa+=2000;let mm=MESES.findIndex(x=>x.startsWith(m[1].slice(0,3)));if(mm>=0)return {label:MESES[mm][0].toUpperCase()+MESES[mm].slice(1)+' '+aa,key:aa*12+mm};}
+  return null;
+}
 function bucketDe(perda){
-  const p=norm(perda);
-  if(!p) return null;
-  if(p==='total') return 'total';
-  if(p.startsWith('remoto')) return 'rem';
-  if(p.includes('possivel') && p.includes('>50')) return 'pos50';
-  if(p.includes('possivel')) return 'pos';
-  if(p.startsWith('provavel')) return 'pro';
-  return 'outro';
+  const p=normCab(perda); if(!p) return null;
+  if(/^total\b/.test(p)) return 'total';
+  if(p.includes('remot')) return 'rem';
+  if(p.includes('possiv') && (p.includes('>50')||p.includes('acima')||p.includes('maior'))) return 'pos50';
+  if(p.includes('possiv')) return 'pos';
+  if(p.includes('provav')) return 'pro';
+  if(p.includes('encerr')||p.includes('arquiv')) return 'enc';
+  return null;
 }
 const PROGDE={rem:'REMOTO',pos:'POSSÍVEL (<50%)',pos50:'POSSÍVEL (>50%)',pro:'PROVÁVEL'};
-
-/* Detecta o layout de cada aba:
-   A = relatório do escritório (uma linha por processo, colunas de risco)
-   B = relatório mensal de contingenciamento (blocos por processo, um pedido por linha, séries mensais) */
-function detectarLayout(aoa){
-  for(let i=0;i<Math.min(20,aoa.length);i++){
-    const r=(aoa[i]||[]).map(norm);
-    if(!r.some(c=>c==='reclamante'||c==='autor')) continue;
-    if(r.some(c=>c.startsWith('possibilidade de perda'))) return {tipo:'B',hi:i};
-    if(r.some(c=>c.includes('valor da causa')||c.includes('risco economico'))) return {tipo:'A',hi:i};
-    return {tipo:'A',hi:i};
-  }
-  return {tipo:null,hi:-1};
+function progDosValores(x){return x.pro>0?'PROVÁVEL':x.pos50>0?'POSSÍVEL (>50%)':x.pos>0?'POSSÍVEL (<50%)':x.rem>0?'REMOTO':'NÃO CLASSIFICADO';}
+function areaUsada(aoa){
+  let maxCol=0,maxRow=-1;
+  aoa.forEach((r,i)=>{let last=-1;(r||[]).forEach((v,j)=>{if(String(v??'').trim()!=='')last=j;});if(last>=0){maxRow=i;maxCol=Math.max(maxCol,last+1);}});
+  return {rows:maxRow+1,cols:maxCol};
 }
-
-function parseA(aoa,hi,aba,fonte,info){
-  const out=[];
-  const hdrRaw=(aoa[hi]||[]).map(c=>String(c==null?'':c).replace(/\s+/g,' ').trim());
-  const hdr=hdrRaw.map(c=>MAPA[norm(c)]||null);
-  const iRec=hdr.indexOf('reclamante');
-  hdrRaw.forEach((c,j)=>{ if(!c) return; hdr[j]?info.mapeadas.add(c):info.novas.add(c); });
-  const arqAba=/arquiv|encerrad|finalizad/i.test(aba);
+function analisarAba(aoa){
+  const area=areaUsada(aoa); let melhor=null; let linhaMes=null; const candidatos=[];
+  for(let i=0;i<area.rows;i++){
+    const row=(aoa[i]||[]).slice(0,area.cols);
+    const mapped=row.map(mapearCabecalho);
+    const campos=[...new Set(mapped.filter(Boolean))];
+    const identidade=campos.filter(x=>CAMPOS_CHAVE.has(x)).length;
+    const financeiros=campos.filter(x=>CAMPOS_FIN.has(x)).length;
+    const mensalLong=campos.includes('mesReferencia')&&campos.includes('possibilidadePerda')&&campos.includes('valorAtualizado')&&identidade>0;
+    const score=campos.length*10+identidade*24+financeiros*8+(mensalLong?70:0);
+    const cand={row:i,score,campos,mapped,identidade,financeiros,mensalLong};
+    if(identidade>0&&campos.length>=3)candidatos.push(cand);
+    if(!melhor||score>melhor.score) melhor=cand;
+    const meses=[];row.forEach((v,j)=>{const mi=mesInfo(v);if(mi)meses.push({...mi,col:j});});
+    if(meses.length>=2 && (!linhaMes||meses.length>linhaMes.meses.length)) linhaMes={row:i,meses};
+  }
+  const blocos=[];
+  for(let i=0;i<area.rows;i++) for(let j=0;j<area.cols;j++) if(mapearCabecalho((aoa[i]||[])[j])==='reclamante') blocos.push({row:i,col:j});
+  const cabBlocos=candidatos.filter(c=>c.campos.includes('objeto')&&c.campos.includes('possibilidadePerda')&&c.campos.includes('valorAtualizado'));
+  let tipo=null;
+  if(melhor&&melhor.mensalLong) tipo='MENSAL_LINHAS';
+  else if(linhaMes&&blocos.length) tipo='MENSAL_BLOCOS';
+  else if(cabBlocos.length>=2) tipo='BLOCOS_SIMPLES';
+  else if(melhor&&melhor.identidade>0&&melhor.campos.length>=3) tipo='TABELA';
+  return {tipo,melhor,linhaMes,blocos,cabBlocos,area};
+}
+function valorCelula(row,j){return row&&j>=0?row[j]:'';}
+function statusOriginal(v){
+  const s=String(v||'').trim();
+  if(/arquiv|encerr|baixad|finaliz/i.test(s)) return 'Arquivado';
+  if(/ativ|andamento|abert|pendente/i.test(s)) return 'Ativo';
+  return s||'Não informado';
+}
+function aplicarPerda(o,perda,valor){
+  const b=bucketDe(perda),v=parseNum(valor);
+  if(b==='rem')o.riscoRemoto=(parseNum(o.riscoRemoto)+v);
+  if(b==='pos')o.riscoPossivel=(parseNum(o.riscoPossivel)+v);
+  if(b==='pos50')o.riscoPossivel50=(parseNum(o.riscoPossivel50)+v);
+  if(b==='pro')o.riscoProvavel=(parseNum(o.riscoProvavel)+v);
+}
+function parseTabela(aoa,diag,aba,fonte,info){
+  const hi=diag.melhor.row,out=[];
+  const hdrRaw=(aoa[hi]||[]).map(c=>String(c??'').replace(/\s+/g,' ').trim());
+  const hdr=hdrRaw.map(mapearCabecalho);
+  hdrRaw.forEach((c,j)=>{if(!c)return;hdr[j]?info.mapeadas.add(c):info.novas.add(c);});
   for(let i=hi+1;i<aoa.length;i++){
-    const row=aoa[i]||[];
-    if(!String(row[iRec]==null?'':row[iRec]).trim()) continue; // linha de total ou vazia
-    const o={aba,fonte,layout:'A',extras:{}};
+    const row=aoa[i]||[]; if(!row.some(v=>String(v??'').trim()!==''))continue;
+    const o={aba,fonte,layout:'TABELA',extras:{}};
     hdr.forEach((k,j)=>{
-      const v=row[j];
-      if(k) o[k]=v;
-      else if(hdrRaw[j] && String(v==null?'':v).trim()!=='') o.extras[hdrRaw[j]]=v;
+      const v=row[j]; if(k)o[k]=v;
+      else if(hdrRaw[j]&&String(v??'').trim()!=='')o.extras[hdrRaw[j]]=v;
     });
-    if(!o.status) o.status=(arqAba||o.arquivamento)?'Arquivado':'Ativo';
-    else o.status=/arquiv|encerr|baixad/i.test(String(o.status))?'Arquivado':'Ativo';
+    const ident=String(o.reclamante||o.processo||o.cpj||'').trim();
+    if(!ident)continue;
+    if(o.objeto==null&&o.pedido!=null)o.objeto=o.pedido;
+    if(o.possibilidadePerda||o.valorAtualizado)aplicarPerda(o,o.possibilidadePerda,o.valorAtualizado);
+    o.status=statusOriginal(o.status);
+    o.riscoTotal=parseNum(o.riscoTotal)||(parseNum(o.riscoRemoto)+parseNum(o.riscoPossivel)+parseNum(o.riscoPossivel50)+parseNum(o.riscoProvavel));
     out.push(o);
   }
   return out;
 }
-
-function parseB(aoa,aba,fonte,info){
-  // 1. linha dos meses
-  let meses=[];
-  for(let i=0;i<20;i++){
-    const r=aoa[i]||[];
-    const cand=[];
-    r.forEach((c,j)=>{ if(MESRE.test(norm(c))) cand.push({col:j,label:String(c).trim()}); });
-    if(cand.length>=2){ meses=cand; break; }
+function parseMensalLinhas(aoa,diag,aba,fonte,info){
+  const hi=diag.melhor.row;
+  const hdrRaw=(aoa[hi]||[]).map(c=>String(c??'').replace(/\s+/g,' ').trim());
+  const hdr=hdrRaw.map(mapearCabecalho);
+  hdrRaw.forEach((c,j)=>{if(!c)return;hdr[j]?info.mapeadas.add(c):info.novas.add(c);});
+  const grupos=new Map();
+  for(let i=hi+1;i<aoa.length;i++){
+    const row=aoa[i]||[]; if(!row.some(v=>String(v??'').trim()!==''))continue;
+    const item={extras:{}};hdr.forEach((k,j)=>{const v=row[j];if(k)item[k]=v;else if(hdrRaw[j]&&String(v??'').trim()!=='')item.extras[hdrRaw[j]]=v;});
+    const ident=String(item.processo||item.cpj||item.reclamante||'').trim();
+    const mi=mesInfo(item.mesReferencia); if(!ident||!mi)continue;
+    const key=[item.processo,item.cpj,item.reclamante,item.reclamada].map(x=>normCab(x)).join('|');
+    if(!grupos.has(key))grupos.set(key,{meta:item,meses:new Map(),pedidos:[]});
+    const g=grupos.get(key); Object.entries(item).forEach(([k,v])=>{if(v!==''&&v!=null&&!g.meta[k])g.meta[k]=v;});
+    if(!g.meses.has(mi.key))g.meses.set(mi.key,{mes:mi.label,rem:0,pos:0,pos50:0,pro:0,outro:0,det:[]});
+    const s=g.meses.get(mi.key),b=bucketDe(item.possibilidadePerda),v=parseNum(item.valorAtualizado);
+    if(b&&['rem','pos','pos50','pro'].includes(b))s[b]+=v;else s.outro+=v;
+    const ped=String(item.objeto||'').trim();if(ped){g.pedidos.push(ped);s.det.push({pedido:ped,perda:String(item.possibilidadePerda||'-'),valor:v});}
   }
-  if(!meses.length) return {rows:[],meses:[],totais:{}};
-  // 2. totais que a própria planilha declara no topo (Total / Remoto / Possível / Provável)
-  const totais={};
-  meses.forEach(m=>{
-    const t={total:0,rem:0,pos:0,pos50:0,pro:0};
-    for(let i=0;i<Math.min(10,aoa.length);i++){
-      const b=bucketDe((aoa[i]||[])[m.col]);
-      if(b) t[b==='total'?'total':b]=parseNum((aoa[i]||[])[m.col+1]);
-    }
-    totais[m.label]=t;
+  const rows=[];grupos.forEach(g=>{
+    const serie=[...g.meses.entries()].sort((a,b)=>a[0]-b[0]).map(x=>{const s=x[1];s.tot=s.rem+s.pos+s.pos50+s.pro+s.outro;return s;});
+    const cur=serie[serie.length-1]||{rem:0,pos:0,pos50:0,pro:0,tot:0,det:[]};
+    const m=g.meta;
+    rows.push({...m,aba,fonte,layout:'MENSAL_LINHAS',objeto:[...new Set(g.pedidos)].join(', '),status:statusOriginal(m.status),
+      riscoRemoto:cur.rem,riscoPossivel:cur.pos,riscoPossivel50:cur.pos50,riscoProvavel:cur.pro,riscoTotal:cur.tot,
+      prognostico:String(m.prognostico||'').trim()||progDosValores(cur),serie:serie.map(({det,...x})=>x),pedidosDet:cur.det});
   });
-  // 3. blocos: cada bloco começa numa linha cujo rótulo da 2ª coluna é "Reclamante"
-  const hdrs=[]; aoa.forEach((r,i)=>{ if(norm((r||[])[1])==='reclamante') hdrs.push(i); });
-  const ult=meses[meses.length-1];
-  const rows=[];
-  hdrs.forEach((hr,k)=>{
-    const fim=(k+1<hdrs.length)?hdrs[k+1]:aoa.length;
-    const p1=aoa[hr+1]||[];
-    const nome=String(p1[1]||'').trim();
-    if(!nome) return;
+  return {rows,meses:[...new Set(rows.flatMap(r=>(r.serie||[]).map(s=>s.mes)))]};
+}
+function parseBlocosSimples(aoa,diag,aba,fonte,info){
+  const headers=diag.cabBlocos.sort((a,b)=>a.row-b.row),rows=[];
+  headers.forEach((h,k)=>{
+    const fim=k+1<headers.length?headers[k+1].row:aoa.length;
+    const hdrRaw=(aoa[h.row]||[]).map(c=>String(c??'').replace(/\s+/g,' ').trim());
+    const hdr=hdrRaw.map(mapearCabecalho);
+    hdrRaw.forEach((c,j)=>{if(!c)return;hdr[j]?info.mapeadas.add(c):info.novas.add(c);});
+    const primeira=aoa[h.row+1]||[];
+    const o={aba,fonte,layout:'BLOCOS_SIMPLES',extras:{}},pedidos=[],det=[];
+    hdr.forEach((field,j)=>{
+      const v=primeira[j];
+      if(field&&field!=='objeto'&&field!=='possibilidadePerda'&&field!=='valorAtualizado')o[field]=v;
+      else if(!field&&hdrRaw[j]&&String(v??'').trim()!=='')o.extras[hdrRaw[j]]=v;
+    });
+    const iPed=hdr.indexOf('objeto'),iPer=hdr.indexOf('possibilidadePerda'),iVal=hdr.indexOf('valorAtualizado');
+    for(let r=h.row+1;r<fim;r++){
+      const row=aoa[r]||[];const perda=String(valorCelula(row,iPer)||'').trim();
+      if(bucketDe(perda)==='total')break;
+      const pedido=String(valorCelula(row,iPed)||'').trim(),valor=parseNum(valorCelula(row,iVal));
+      if(!pedido&&!perda&&!valor)continue;
+      if(pedido)pedidos.push(pedido);if(pedido||perda||valor)det.push({pedido:pedido||'(sem pedido informado)',perda:perda||'-',valor});
+      aplicarPerda(o,perda,valor);
+    }
+    if(!String(o.reclamante||o.processo||o.cpj||'').trim())return;
+    o.objeto=[...new Set(pedidos)].join(', ');o.riscoTotal=parseNum(o.riscoRemoto)+parseNum(o.riscoPossivel)+parseNum(o.riscoPossivel50)+parseNum(o.riscoProvavel);
+    o.prognostico=String(o.prognostico||'').trim()||progDosValores({rem:parseNum(o.riscoRemoto),pos:parseNum(o.riscoPossivel),pos50:parseNum(o.riscoPossivel50),pro:parseNum(o.riscoProvavel)});
+    o.status=statusOriginal(o.status);o.pedidosDet=det;rows.push(o);
+  });
+  info.mapeadas.add('Blocos repetidos de processo detectados em toda a aba');
+  return rows;
+}
+
+function perfilColuna(aoa,col,ini=0,fim=aoa.length){let cls=0,num=0,txt=0;for(let i=ini;i<fim;i++){const v=valorCelula(aoa[i],col);if(bucketDe(v))cls++;if(parseNum(v)!==0)num++;if(String(v??'').trim())txt++;}return {cls,num,txt};}
+function paresMensais(aoa,linhaMes){
+  const ms=[...linhaMes.meses].sort((a,b)=>a.col-b.col),pares=[];
+  ms.forEach((m,idx)=>{
+    const fim=idx+1<ms.length?ms[idx+1].col:Math.min((aoa[linhaMes.row]||[]).length,m.col+4);
+    const cols=[];for(let c=m.col;c<Math.max(m.col+2,fim);c++)cols.push({c,...perfilColuna(aoa,c,linhaMes.row+1)});
+    let perda=[...cols].sort((a,b)=>b.cls-a.cls)[0];
+    let valor=[...cols].filter(x=>x.c!==perda.c).sort((a,b)=>b.num-a.num)[0];
+    if(!perda||perda.cls===0)perda={c:m.col};
+    if(!valor||valor.num===0)valor={c:m.col+1};
+    pares.push({...m,perdaCol:perda.c,valorCol:valor.c});
+  });return pares;
+}
+function valorRotulo(aoa,r,c,limite){
+  for(let j=c+1;j<Math.min((aoa[r]||[]).length,c+4);j++){const v=valorCelula(aoa[r],j);if(String(v??'').trim()&&!mapearCabecalho(v)&&!mesInfo(v))return v;}
+  for(let rr=r+1;rr<Math.min(limite,r+4);rr++){
+    const v=valorCelula(aoa[rr],c);if(String(v??'').trim()&&!mapearCabecalho(v)&&!mesInfo(v))return v;
+    const vr=valorCelula(aoa[rr],c+1);if(String(vr??'').trim()&&!mapearCabecalho(vr)&&!mesInfo(vr))return vr;
+  }return '';
+}
+function parseMensalBlocos(aoa,diag,aba,fonte,info){
+  const pares=paresMensais(aoa,diag.linhaMes),starts=[];
+  diag.blocos.forEach(b=>{const v=valorRotulo(aoa,b.row,b.col,Math.min(aoa.length,b.row+5));if(String(v??'').trim())starts.push(b);});
+  const rows=[],totais={};
+  const primeiro=starts.length?Math.min(...starts.map(x=>x.row)):aoa.length;
+  pares.forEach(p=>{const t={total:0,rem:0,pos:0,pos50:0,pro:0};for(let i=0;i<primeiro;i++){const b=bucketDe(valorCelula(aoa[i],p.perdaCol));if(b)t[b==='total'?'total':b]=parseNum(valorCelula(aoa[i],p.valorCol));}totais[p.label]=t;});
+  starts.forEach((st,k)=>{
+    const fim=k+1<starts.length?starts[k+1].row:aoa.length;
+    const meta={},extras={},labelCols=new Set();let dataIni=st.row+1,pedidoCol=-1;
+    for(let r=Math.max(0,st.row-1);r<Math.min(fim,st.row+5);r++){
+      (aoa[r]||[]).forEach((v,c)=>{const key=mapearCabecalho(v);if(!key)return;labelCols.add(c);const val=valorRotulo(aoa,r,c,fim);if(val!==''&&!meta[key])meta[key]=val;if(key==='objeto')pedidoCol=c;dataIni=Math.max(dataIni,r+1);});
+    }
+    if(pedidoCol<0){
+      const firstMonth=Math.min(...pares.map(p=>p.perdaCol));let best={c:-1,score:-1};
+      for(let c=0;c<firstMonth;c++){if(labelCols.has(c))continue;const pf=perfilColuna(aoa,c,dataIni,fim);const score=pf.txt-pf.num*.4;if(score>best.score)best={c,score};}pedidoCol=best.c;
+    }
     const det=[];
-    for(let i=hr+1;i<fim;i++){
-      const row=aoa[i]||[];
-      const temTotal=meses.some(m=>bucketDe(row[m.col])==='total');
-      if(temTotal) break; // linha TOTAL encerra o bloco
-      const pedido=String(row[6]||'').trim();
-      const temValor=meses.some(m=>String(row[m.col]||'').trim()!=='');
-      if(!pedido && !temValor) continue;
-      const porMes={};
-      meses.forEach(m=>{
-        const perda=String(row[m.col]||'').trim();
-        const v=parseNum(row[m.col+1]);
-        if(perda||v) porMes[m.label]={perda,v};
-      });
-      det.push({pedido,porMes});
+    for(let r=dataIni;r<fim;r++){
+      const row=aoa[r]||[];if(!row.some(v=>String(v??'').trim()!==''))continue;
+      if(pares.some(p=>bucketDe(valorCelula(row,p.perdaCol))==='total'))break;
+      const pedido=pedidoCol>=0?String(valorCelula(row,pedidoCol)||'').trim():'';
+      const porMes={};pares.forEach(p=>{const perda=String(valorCelula(row,p.perdaCol)||'').trim(),v=parseNum(valorCelula(row,p.valorCol));if(perda||v)porMes[p.label]={perda,v};});
+      if(pedido||Object.keys(porMes).length)det.push({pedido,porMes});
     }
-    // 4. série mensal agregada do bloco
-    const serie=meses.map(m=>{
-      const s={mes:m.label,rem:0,pos:0,pos50:0,pro:0,outro:0};
-      det.forEach(d=>{
-        const x=d.porMes[m.label]; if(!x) return;
-        const b=bucketDe(x.perda);
-        if(b && b!=='total') s[b]+=x.v;
-      });
-      s.tot=s.rem+s.pos+s.pos50+s.pro+s.outro;
-      return s;
-    });
-    const cur=serie[serie.length-1]||{rem:0,pos:0,pos50:0,pro:0,tot:0};
-    const prog = cur.pro>0?'PROVÁVEL' : cur.pos50>0?'POSSÍVEL (>50%)' : cur.pos>0?'POSSÍVEL (<50%)' : cur.rem>0?'REMOTO' : 'ENCERRADO';
-    const abaAB=/\bab\b/i.test(aba);
-    const pedidosUlt=det.filter(d=>d.pedido).map(d=>{
-      const x=d.porMes[ult.label]||{};
-      return {pedido:d.pedido,perda:x.perda||'-',valor:x.v||0};
-    });
-    rows.push({
-      aba,fonte,layout:'B',
-      cpj:'-',
-      reclamante:nome,
-      processo:String(p1[2]||'').trim(),
-      reclamada: abaAB?'AB (unidade do cluster)':'SONOVA DO BRASIL PRODUTOS AUDIOLOGICOS LTDA',
-      cargo:'N/A',
-      fase:'Não informada',
-      foro:'',
-      objeto:det.map(d=>d.pedido).filter(Boolean).join(', '),
-      andamento:String(p1[4]||'').trim(),
-      condenacao:'',
-      garantia:'',
-      valorCausa:0,
-      riscoRemoto:cur.rem, riscoPossivel:cur.pos, riscoPossivel50:cur.pos50, riscoProvavel:cur.pro,
-      riscoTotal:cur.tot,
-      prognostico:prog,
-      status:cur.tot>0?'Ativo':'Arquivado',
-      serie, pedidosDet:pedidosUlt,
-      extras:{
-        'DEPTO':String(p1[3]||'').trim(),
-        'Data do Status':String(p1[5]||'').trim(),
-        'Mês de referência':ult.label
-      }
-    });
+    const serie=pares.sort((a,b)=>a.key-b.key).map(p=>{const s={mes:p.label,rem:0,pos:0,pos50:0,pro:0,outro:0};det.forEach(d=>{const x=d.porMes[p.label];if(!x)return;const b=bucketDe(x.perda);if(b&&['rem','pos','pos50','pro'].includes(b))s[b]+=x.v;else s.outro+=x.v;});s.tot=s.rem+s.pos+s.pos50+s.pro+s.outro;return s;});
+    const cur=serie[serie.length-1]||{rem:0,pos:0,pos50:0,pro:0,tot:0};const ult=serie[serie.length-1]?.mes;
+    const usados=new Set(['reclamante','processo','reclamada','cargo','fase','foro','status','andamento','dataStatus','departamento','cpj','objeto','prognostico']);
+    Object.entries(meta).forEach(([kk,v])=>{if(!usados.has(kk)&&v!=='')extras[kk]=v;});
+    if(meta.departamento)extras['Departamento']=meta.departamento;if(meta.dataStatus)extras['Data do status']=meta.dataStatus;if(ult)extras['Mês de referência']=ult;
+    const nome=String(meta.reclamante||'').trim();const proc=String(meta.processo||'').trim();if(!nome&&!proc)return;
+    rows.push({aba,fonte,layout:'MENSAL_BLOCOS',cpj:meta.cpj||'-',reclamante:nome||'(sem reclamante informado)',processo:proc,
+      reclamada:meta.reclamada||'Não informada',cargo:meta.cargo||'N/A',fase:meta.fase||'Não informada',foro:meta.foro||'',
+      objeto:[...new Set(det.map(d=>d.pedido).filter(Boolean))].join(', '),andamento:meta.andamento||'',condenacao:'',garantia:'',valorCausa:0,
+      riscoRemoto:cur.rem,riscoPossivel:cur.pos,riscoPossivel50:cur.pos50,riscoProvavel:cur.pro,riscoTotal:cur.tot,
+      prognostico:meta.prognostico||progDosValores(cur),status:statusOriginal(meta.status),serie,
+      pedidosDet:det.filter(d=>d.pedido).map(d=>{const x=d.porMes[ult]||{};return {pedido:d.pedido,perda:x.perda||'-',valor:x.v||0};}),extras});
   });
-  info.mapeadas.add('Layout mensal: Reclamante, Número do processo, DEPTO, Status Atual, Data do Status, Pedidos, séries mensais');
-  return {rows,meses:meses.map(m=>m.label),totais};
+  info.mapeadas.add('Blocos mensais detectados por rótulos e perfil das colunas');
+  return {rows,meses:pares.sort((a,b)=>a.key-b.key).map(p=>p.label),totais};
+}
+function chaveRegistro(r){
+  const p=String(r.processo||'').match(/\d{7}-\d{2}\.\d{4}\.5\.\d{2}\.\d{4}/);
+  if(p)return 'P:'+p[0];
+  const c=normCab(r.cpj);if(c&&c!=='-'&&c!=='n a')return 'C:'+c;
+  return 'R:'+normCab(r.reclamante)+'|'+normCab(r.reclamada);
+}
+function qualidadeRegistro(r){
+  const serie=(r.serie||[]).length;
+  const preenchidos=['reclamante','processo','reclamada','cargo','fase','foro','objeto','andamento','condenacao','garantia','status'].filter(k=>String(r[k]||'').trim()&&String(r[k]).trim()!=='Não informado').length;
+  return serie*10000+preenchidos*10+(r.layout==='MENSAL_BLOCOS'?5:r.layout==='MENSAL_LINHAS'?4:r.layout==='BLOCOS_SIMPLES'?2:1);
+}
+function consolidarDuplicados(lista){
+  const mapa=new Map(),ordem=[];let qtd=0;
+  lista.forEach(r=>{
+    const k=chaveRegistro(r);
+    if(!mapa.has(k)){mapa.set(k,r);ordem.push(k);return;}
+    qtd++;const a=mapa.get(k),qa=qualidadeRegistro(a),qb=qualidadeRegistro(r),prim=qb>=qa?r:a,sec=qb>=qa?a:r;
+    const m={...prim,extras:{...(sec.extras||{}),...(prim.extras||{})}};
+    ['cpj','reclamante','processo','reclamada','terceiro','cargo','fase','foro','objeto','andamento','condenacao','garantia','status','admissao','demissao','distribuicao','arquivamento'].forEach(f=>{if(!String(m[f]||'').trim()||m[f]==='Não informado'||m[f]==='Não informada'||m[f]==='N/A')m[f]=sec[f];});
+    if((sec.serie||[]).length>(m.serie||[]).length)m.serie=sec.serie;
+    m.objeto=[...new Set([...(String(prim.objeto||'').split(', ')),...(String(sec.objeto||'').split(', '))].filter(Boolean))].join(', ');
+    m.extras['Abas de origem']=[...new Set([prim.aba,sec.aba,String((prim.extras||{})['Abas de origem']||'').split(' | '),String((sec.extras||{})['Abas de origem']||'').split(' | ')].flat().filter(Boolean))].join(' | ');
+    mapa.set(k,m);
+  });
+  return {rows:ordem.map(k=>mapa.get(k)),duplicados:qtd};
 }
 
-/* Lê um workbook inteiro, aba por aba, escolhendo o parser certo. */
 function parseWorkbook(buf,nomeArquivo){
-  const wb=XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true});
-  const rows=[]; const fontes=[];
-  const info={mapeadas:new Set(),novas:new Set(),abas:[],ignoradas:[]};
+  const wb=XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true,cellFormula:true,cellNF:true});
+  const rows=[],fontes=[],info={mapeadas:new Set(),novas:new Set(),abas:[],ignoradas:[],diagnosticos:[]};
   wb.SheetNames.forEach(aba=>{
-    const aoa=XLSX.utils.sheet_to_json(wb.Sheets[aba],{header:1,defval:'',raw:false,dateNF:'yyyy-mm-dd'});
-    const {tipo,hi}=detectarLayout(aoa);
-    if(!tipo){ info.ignoradas.push(aba); return; }
-    if(tipo==='A'){
-      const r=parseA(aoa,hi,aba,nomeArquivo,info);
-      rows.push(...r); info.abas.push(aba+' · layout escritório ('+r.length+')');
+    const aoa=XLSX.utils.sheet_to_json(wb.Sheets[aba],{header:1,defval:'',raw:false,dateNF:'yyyy-mm-dd',blankrows:true});
+    const diag=analisarAba(aoa);info.diagnosticos.push({aba,tipo:diag.tipo,linha:diag.melhor?diag.melhor.row+1:null,campos:diag.melhor?diag.melhor.campos:[]});
+    if(!diag.tipo){info.ignoradas.push(aba+' (nenhum conjunto mínimo de campos encontrado em '+diag.area.rows+' linhas × '+diag.area.cols+' colunas)');return;}
+    if(diag.tipo==='TABELA'){
+      const r=parseTabela(aoa,diag,aba,nomeArquivo,info);if(!r.length){info.ignoradas.push(aba+' (cabeçalho reconhecido, sem processos válidos)');return;}rows.push(...r);info.abas.push(aba+' · tabela · cabeçalho linha '+(diag.melhor.row+1)+' · '+r.length+' processo(s)');
+    }else if(diag.tipo==='MENSAL_LINHAS'){
+      const r=parseMensalLinhas(aoa,diag,aba,nomeArquivo,info);if(!r.rows.length){info.ignoradas.push(aba+' (histórico mensal sem registros válidos)');return;}rows.push(...r.rows);fontes.push({fonte:nomeArquivo,aba,layout:'MENSAL_LINHAS',meses:r.meses,totais:{}});info.abas.push(aba+' · histórico mensal em linhas · '+r.rows.length+' processo(s)');
+    }else if(diag.tipo==='BLOCOS_SIMPLES'){
+      const r=parseBlocosSimples(aoa,diag,aba,nomeArquivo,info);if(!r.length){info.ignoradas.push(aba+' (blocos repetidos encontrados, mas sem processos válidos)');return;}rows.push(...r);info.abas.push(aba+' · blocos de processos · '+r.length+' processo(s)');
     }else{
-      const r=parseB(aoa,aba,nomeArquivo,info);
-      if(!r.rows.length || !r.meses.length){ info.ignoradas.push(aba+' (bloco mensal sem série de meses)'); return; }
-      rows.push(...r.rows);
-      fontes.push({fonte:nomeArquivo,aba,layout:'B',meses:r.meses,totais:r.totais});
-      info.abas.push(aba+' · layout mensal ('+r.rows.length+')');
+      const r=parseMensalBlocos(aoa,diag,aba,nomeArquivo,info);if(!r.rows.length){info.ignoradas.push(aba+' (blocos mensais encontrados, mas sem processos válidos)');return;}rows.push(...r.rows);fontes.push({fonte:nomeArquivo,aba,layout:'MENSAL_BLOCOS',meses:r.meses,totais:r.totais});info.abas.push(aba+' · blocos mensais · '+r.rows.length+' processo(s)');
     }
-  });
-  return {rows,fontes,info};
+  });const cons=consolidarDuplicados(rows);if(cons.duplicados)info.abas.push(cons.duplicados+' registro(s) repetido(s) consolidado(s) pelo número do processo');return {rows:cons.rows,fontes,info};
 }
-
-/* ---------- armazenamento local ---------- */
-const LSZERO=LSKEY+'_zerado';
-let STORE_OK=true;
-function saveStore(){
-  try{
-    localStorage.removeItem(LSZERO);
-    localStorage.setItem(LSKEY,JSON.stringify({v:1,ts:Date.now(),raw:RAW,fontes:FONTES,colinfo:{...COLINFO}}));
-    marcarStore('dados importados salvos no navegador');
-  }catch(err){
-    STORE_OK=false;
-    marcarStore('armazenamento indisponível: dados apenas nesta sessão');
-  }
-}
-function loadStore(){
-  try{ const s=localStorage.getItem(LSKEY); return s?JSON.parse(s):null; }
-  catch(err){ STORE_OK=false; return null; }
-}
-function zerado(){ try{ return localStorage.getItem(LSZERO)==='1'; }catch(err){ return false; } }
-function marcarStore(txt){ const el=document.getElementById('sigStore'); if(el) el.textContent=txt; }
-
-/* Reset total: nada sobra em disco nem em memória.
-   As bases embutidas também são descartadas da memória (delete nas chaves) e um marcador
-   impede que voltem sozinhas no próximo carregamento do arquivo. */
 function resetStore(){
-  const msg='Resetar dados\n\nIsto apaga:\n- tudo o que está salvo no navegador;\n- todos os processos em memória;\n- as bases originais embutidas neste arquivo (elas não voltam sozinhas ao reabrir).\n\nA ferramenta fica vazia até você importar uma planilha. Nenhum arquivo Excel do seu computador é alterado.\n\nConfirmar?';
-  if(!confirm(msg)) return;
-  try{ localStorage.removeItem(LSKEY); localStorage.setItem(LSZERO,'1'); }catch(err){}
-  descartarMemoria();
-  marcarStore('memória e armazenamento zerados');
-  KPISEL=null; SORT={c:'rTot',d:-1};
-  fecharFicha();
-  popularFiltros(); aplicar();
-  alert('Dados zerados. Nada permanece em memória nem no armazenamento do navegador.');
-}
-function descartarMemoria(){
-  Object.keys(EMBUTIDAS).forEach(k=>{ delete EMBUTIDAS[k]; });
-  RAW=[]; FONTES=[]; TODOS=[]; PRE=[]; FILT=[];
+  if(!confirm('Resetar os dados carregados nesta sessão?\n\nOs arquivos Excel não serão alterados.'))return;
+  RAW=[];FONTES=[];TODOS=[];PRE=[];FILT=[];KPISEL=null;SORT={c:'rTot',d:-1};
   COLINFO={mapeadas:[],novas:[],abas:[],ignoradas:[],arquivo:null};
-  destroy();
-  ['fBusca'].forEach(i=>document.getElementById(i).value='');
-  document.getElementById('fStatus').value='';
-  atualizarCabecalho();
+  destroy();fecharFicha();
+  document.getElementById('fileIn').value='';document.getElementById('fBusca').value='';
+  ['fFonte','fStatus','fProg','fEmp','fFase','fTrt','fPed'].forEach(id=>{const e=document.getElementById(id);e.innerHTML='<option value="">Todos</option>';e.value='';});
+  document.querySelectorAll('nav.tabs button').forEach((b,i)=>b.classList.toggle('on',i===0));document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='p1'));
+  atualizarCabecalho();marcarStore('dados somente na memória desta página');render();
 }
-function restaurarEmbutidas(){
-  if(!confirm('Recarregar as bases originais que vieram dentro deste arquivo?\n\nOs dados importados salvos no navegador serão substituídos.')) return;
-  try{ localStorage.removeItem(LSKEY); localStorage.removeItem(LSZERO); }catch(err){}
-  location.reload();
+function lerArquivo(f){return new Promise((resolve,reject)=>{const rd=new FileReader();rd.onload=e=>{try{resolve({f,res:parseWorkbook(e.target.result,f.name)});}catch(err){reject(new Error(f.name+': '+err.message));}};rd.onerror=()=>reject(new Error(f.name+': falha de leitura'));rd.readAsArrayBuffer(f);});}
+async function importar(e){
+  const files=[...(e.target.files||[])];if(!files.length)return;
+  try{
+    const resultados=await Promise.all(files.map(lerArquivo));let total=0,abas=[],ignoradas=[],mapeadas=new Set(),novas=new Set();
+    resultados.forEach(({f,res})=>{
+      RAW=RAW.filter(r=>r.fonte!==f.name).concat(res.rows);FONTES=FONTES.filter(x=>x.fonte!==f.name).concat(res.fontes);total+=res.rows.length;
+      abas.push(...res.info.abas.map(x=>f.name+' › '+x));ignoradas.push(...res.info.ignoradas.map(x=>f.name+' › '+x));res.info.mapeadas.forEach(x=>mapeadas.add(x));res.info.novas.forEach(x=>novas.add(x));
+    });
+    if(!total){alert('Nenhum processo foi reconhecido.\n\nO leitor examinou todas as abas, linhas e colunas. Use o botão Baixar template para padronizar a próxima remessa.\n\n'+ignoradas.join('\n'));return;}
+    COLINFO={mapeadas:[...mapeadas],novas:[...novas],abas,ignoradas,arquivo:files.map(f=>f.name).join(' + ')};
+    TODOS=RAW.map(normalizar);KPISEL=null;SORT={c:'rTot',d:-1};atualizarCabecalho();marcarStore('dados somente na memória · '+files.length+' arquivo(s) lido(s)');popularFiltros();aplicar();
+    let msg='Leitura concluída: '+total+' processo(s) em '+files.length+' arquivo(s).\n\nAbas lidas:\n- '+abas.join('\n- ');if(ignoradas.length)msg+='\n\nAbas não reconhecidas:\n- '+ignoradas.join('\n- ');if(novas.size)msg+='\n\nColunas adicionais preservadas:\n- '+[...novas].join('\n- ');alert(msg);
+  }catch(err){alert('Não foi possível concluir a leitura:\n'+err.message);}finally{e.target.value='';}
 }
-
-function importar(e){
-  const f=e.target.files[0]; if(!f) return;
-  const rd=new FileReader();
-  rd.onload=ev=>{
-    try{
-      const res=parseWorkbook(ev.target.result,f.name);
-      if(!res.rows.length){
-        alert('Nenhuma aba reconhecida.\n\nO leitor procura por:\n- Layout escritório: coluna Reclamante junto de Valor da Causa ou Risco Econômico.\n- Layout mensal: coluna Reclamante junto de Possibilidade de perda.\n\nAbas encontradas sem esse padrão: '+(res.info.ignoradas.join(', ')||'nenhuma'));
-        return;
-      }
-      // acumula com o que já está carregado, substituindo a mesma fonte se reimportada
-      RAW=RAW.filter(r=>r.fonte!==f.name).concat(res.rows);
-      FONTES=FONTES.filter(x=>x.fonte!==f.name).concat(res.fontes);
-      COLINFO={mapeadas:[...res.info.mapeadas],novas:[...res.info.novas],abas:res.info.abas,ignoradas:res.info.ignoradas,arquivo:f.name};
-      TODOS=RAW.map(normalizar);
-      saveStore();
-      KPISEL=null; SORT={c:'rTot',d:-1};
-      atualizarCabecalho();
-      popularFiltros(); aplicar();
-      let m='Importação concluída: '+res.rows.length+' processo(s) de '+f.name+'.\n\nAbas lidas:\n- '+res.info.abas.join('\n- ');
-      if(res.info.ignoradas.length) m+='\n\nAbas ignoradas (sem coluna Reclamante):\n- '+res.info.ignoradas.join('\n- ');
-      if(res.info.novas.size) m+='\n\nColunas novas preservadas:\n- '+[...res.info.novas].join('\n- ');
-      alert(m);
-    }catch(err){ alert('Não foi possível ler o arquivo: '+err.message); }
-  };
-  rd.readAsArrayBuffer(f);
-  e.target.value='';
+function baixarTemplate(){
+  const wb=XLSX.utils.book_new();
+  const procHeaders=['CPJ','Reclamante','Número do Processo','Empresa Reclamada','Terceiro','Cargo','Departamento','Data de Admissão','Data de Demissão','Fase Processual','Data de Distribuição','Foro','Objeto','Valor da Causa','Prognóstico','Risco Remoto','Risco Possível (<50%)','Risco Possível (>50%)','Risco Provável','Risco Total','Situação','Data de Arquivamento','Andamento','Condenação','Garantia','Responsável','Última Atualização'];
+  const histHeaders=['CPJ','Reclamante','Número do Processo','Empresa Reclamada','Cargo','Departamento','Mês de Referência','Pedido','Possibilidade de Perda','Valor Envolvido Atualizado','Situação','Fase Processual','Andamento','Última Atualização'];
+  const wsP=XLSX.utils.aoa_to_sheet([procHeaders]);wsP['!cols']=procHeaders.map((h,i)=>({wch:[1,2,3,4,12,21,22,23,24].includes(i)?32:20}));wsP['!autofilter']={ref:'A1:AA1'};
+  const wsH=XLSX.utils.aoa_to_sheet([histHeaders]);wsH['!cols']=histHeaders.map((h,i)=>({wch:[1,2,3,7,12].includes(i)?32:20}));wsH['!autofilter']={ref:'A1:N1'};
+  const instrucoes=[
+    ['TEMPLATE DE PROCESSOS TRABALHISTAS',''],
+    ['Objetivo','Padronizar o envio de informações por escritórios jurídicos sem impedir a leitura de outros layouts.'],
+    ['Aba Processos','Use uma linha por processo. A ordem das colunas pode ser alterada, mas não una células no cabeçalho.'],
+    ['Aba Histórico Mensal','Use uma linha por processo, pedido e mês. Repita a identificação do processo em todas as linhas.'],
+    ['Campos mínimos','Informe Reclamante ou Número do Processo. Para histórico mensal, informe também Mês de Referência, Possibilidade de Perda e Valor Envolvido Atualizado.'],
+    ['Possibilidade de perda','Use: Remoto, Possível (<50%), Possível (>50%) ou Provável.'],
+    ['Datas','Preferencialmente dd/mm/aaaa.'],
+    ['Valores','Use células numéricas, sem digitar observações junto ao valor.'],
+    ['Colunas extras','São permitidas. O leitor preservará os campos não mapeados na ficha e na exportação.'],
+    ['Não utilizar','Totais misturados às linhas de processos, cabeçalhos mesclados, senhas ou planilhas protegidas sem acesso.']
+  ];
+  const wsI=XLSX.utils.aoa_to_sheet(instrucoes);wsI['!cols']=[{wch:24},{wch:105}];
+  const dic=[['Campo padrão','Obrigatório','Exemplos de cabeçalhos aceitos'],
+    ...Object.entries(ALIASES).map(([k,a])=>[k,CAMPOS_CHAVE.has(k)?'Identificação':'Não',a.join(' | ')])];
+  const wsD=XLSX.utils.aoa_to_sheet(dic);wsD['!cols']=[{wch:26},{wch:15},{wch:110}];wsD['!autofilter']={ref:'A1:C'+dic.length};
+  XLSX.utils.book_append_sheet(wb,wsI,'Instruções');XLSX.utils.book_append_sheet(wb,wsP,'Processos');XLSX.utils.book_append_sheet(wb,wsH,'Histórico Mensal');XLSX.utils.book_append_sheet(wb,wsD,'Dicionário de Campos');
+  XLSX.writeFile(wb,'Template_Processos_Trabalhistas_Escritorios.xlsx');
 }
 function exportar(){
   const linhas=FILT.map(r=>({
@@ -1532,7 +1600,7 @@ function exportar(){
   const ws=XLSX.utils.json_to_sheet(linhas);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Processos');
-  XLSX.writeFile(wb,'Leitor_Processos_Sonova_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  XLSX.writeFile(wb,'Leitor_Processos_Trabalhistas_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
 boot();
