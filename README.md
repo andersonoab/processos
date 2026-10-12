@@ -50,10 +50,10 @@ O relatório fornecido de 09/10/2026 foi usado na validação, sem ser incorpora
 
 | Indicador | Resultado |
 | --- | ---: |
-| Processos não arquivados | 9 |
-| Valor da causa sem arquivados | R$ 1.854.454,89 |
-| Valor provável sem arquivados | R$ 684.135,78 |
-| Processos arquivados para consulta | 16 |
+| Processos não arquivados | 0 |
+| Valor da causa sem arquivados | R$ 0,00 |
+| Valor provável sem arquivados | R$ 0,00 |
+| Processos arquivados para consulta | 0 |
 
 Foram conferidos leitura da base real, exclusão das abas auxiliares, filtros, consulta dos arquivados, preservação das fichas, ordenação, composição dos gráficos pelo valor da causa, exportação filtrada e cenário de histórico mensal com valores em Provável e Possível acima de 50%.
 
