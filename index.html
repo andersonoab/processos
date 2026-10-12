@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Leitor de Processos Trabalhistas | Sonova</title>
 <link href="https://fonts.googleapis.com/css2?family=Rufina:wght@400;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/chart.umd.min.js"></script>
+<script src="vendor/chartjs-plugin-datalabels.min.js"></script>
 <style>
 :root{
   --p:#0083CA; --dk:#003C64; --md:#005A64; --lt:#6EB4DC;
@@ -61,7 +61,16 @@ nav.tabs button:hover{color:var(--dk)}
 .kpi .t{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--mu);margin-bottom:6px;min-height:26px}
 .kpi .v{font-family:'Rufina',serif;font-size:21px;color:var(--dk);font-weight:700;line-height:1.1}
 .kpi .d{font-size:11px;color:var(--mu);margin-top:4px}
-.kpi.prov{border-left-color:var(--ac)} .kpi.prov .v{color:var(--ac)}
+.kpi.prov{border-left-color:var(--p)} .kpi.prov .v{color:var(--p)}
+.resumo-faixa{margin-bottom:16px}
+.resumo-faixa h2{font-size:16px;margin-bottom:4px}
+.resumo-faixa .hint{margin-bottom:8px}
+.resumo-faixa .kpis{grid-template-columns:2fr 1fr 1fr;margin-bottom:0}
+.resumo-faixa .v{font-size:clamp(18px,2vw,26px)}
+.resumo-faixa .t{min-height:0}
+.resumo-extra{margin-bottom:18px}
+.resumo-extra summary{cursor:pointer;color:var(--dk);margin-bottom:10px}
+@media(max-width:650px){.resumo-faixa .kpis{grid-template-columns:1fr}}
 .kpi.poss{border-left-color:var(--ac2)} .kpi.poss .v{color:var(--ac2)}
 .kpi.rem{border-left-color:var(--lt)}
 
@@ -143,7 +152,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .hint{font-size:12px;color:var(--mu)}
 .dropzone{border:2px dashed var(--bd);border-radius:4px;padding:26px;text-align:center;color:var(--mu);background:#fff;margin-bottom:14px}
 .dropzone.hot{border-color:var(--p);background:#f2f9fd;color:var(--p)}
-body.sem-dados .kpis,body.sem-dados .pane .card,body.sem-dados aside .mini,body.sem-dados #fAtivo{display:none}
+body.sem-dados .resumo-faixa,body.sem-dados .resumo-extra,body.sem-dados #escopoCustos,body.sem-dados .kpis,body.sem-dados .pane .card,body.sem-dados aside .mini,body.sem-dados #fAtivo{display:none}
 body.sem-dados #empty{display:block}
 #empty{display:none}
 #empty .big{font-family:'Rufina',serif;font-size:20px;color:var(--dk);margin-bottom:6px}
@@ -193,7 +202,7 @@ body.sem-dados #empty{display:block}
     <div class="l"><span>Processos</span><span id="mQtd">0</span></div>
     <div class="l"><span>Valor da causa</span><span id="mVc">-</span></div>
     <div class="l"><span>Risco econômico</span><span id="mRe">-</span></div>
-    <div class="l"><span>Provisão sugerida</span><span id="mPv">-</span></div>
+    <div class="l"><span>Base provável</span><span id="mPv">-</span></div>
     <div class="l"><span>Provável</span><span id="mPr">-</span></div>
     <div class="l"><span>Possível</span><span id="mPo">-</span></div>
     <div class="l"><span>Remoto</span><span id="mRm">-</span></div>
@@ -227,22 +236,33 @@ body.sem-dados #empty{display:block}
       </div>
       <div id="emptyRestore"></div>
     </div>
-    <div class="kpis" id="kpis"></div>
+    <div class="resumo-faixa">
+      <h2>Valor da causa</h2>
+      <div class="hint">Valores informados na base, sem substituir pela estimativa de risco.</div>
+      <div class="kpis" id="kpisCausa"></div>
+    </div>
+    <div class="resumo-faixa">
+      <h2>Valor provável</h2>
+      <div class="hint">Base de provisão para análise do Financeiro: somente valores classificados como provável.</div>
+      <div class="kpis" id="kpisProvavel"></div>
+    </div>
+    <div class="note" id="escopoCustos" style="margin-bottom:16px"></div>
+    <details class="resumo-extra"><summary>Outros indicadores de risco e garantias</summary><div class="kpis" id="kpis"></div></details>
     <div class="grid g2">
       <div class="card">
-        <h2>Exposição por prognóstico</h2>
-        <div class="cs">Distribuição do risco econômico entre provável (provisionável), possível (divulgável) e remoto.</div>
+        <h2>Valor da causa por prognóstico</h2>
+        <div class="cs">Soma do valor da causa por prognóstico do processo. Cada processo é contado uma vez; arquivados ficam fora dos valores.</div>
         <div class="chartbox"><canvas id="c1"></canvas></div>
       </div>
       <div class="card">
-        <h2>Risco por empresa reclamada</h2>
-        <div class="cs">Alocação da contingência por CNPJ demandado.</div>
+        <h2>Valor da causa por empresa reclamada</h2>
+        <div class="cs">Soma da coluna Valor da Causa por empresa reclamada, sem arquivados.</div>
         <div class="chartbox"><canvas id="c2"></canvas></div>
       </div>
     </div>
     <div class="card">
-      <h2>Ranking de exposição por processo</h2>
-      <div class="cs">Risco econômico total por reclamante. Dê duplo clique na barra para abrir a ficha.</div>
+      <h2>Ranking do valor da causa por processo</h2>
+      <div class="cs">Valor da causa por reclamante, lido diretamente da base. Dê duplo clique na barra para abrir a ficha.</div>
       <div class="chartbox tall"><canvas id="c3"></canvas></div>
     </div>
     <div class="grid g3">
@@ -251,10 +271,10 @@ body.sem-dados #empty{display:block}
       <div class="card"><h2>Ajuizamentos por semestre</h2><div class="cs">Data de distribuição da ação.</div><div class="chartbox"><canvas id="c6"></canvas></div></div>
     </div>
     <div class="card">
-      <h2>Valor da causa versus risco econômico</h2>
-      <div class="cs">Cada ponto é um processo. A linha é a tendência esperada; pontos muito acima dela indicam risco desproporcional ao valor atribuído à causa.</div>
+      <h2>Valor da causa por fase processual</h2>
+      <div class="cs">Soma do valor da causa em cada fase. Dê duplo clique na barra para ver os processos componentes.</div>
       <div class="chartbox tall"><canvas id="c7"></canvas></div>
-      <div class="note">Leitura: o valor da causa é o pedido do reclamante; o risco econômico é a estimativa do escritório. Quando o risco supera o valor da causa em várias vezes, o pedido inicial subdimensiona a exposição real (normalmente por condenações supervenientes, obrigações de trato sucessivo ou pensionamento).</div>
+      <div class="note">Todos os gráficos monetários usam somente Valor da Causa. Os valores provável, possível e remoto continuam disponíveis nas fichas e tabelas, com a base provável separada no resumo.</div>
     </div>
   </section>
 
@@ -282,8 +302,8 @@ body.sem-dados #empty{display:block}
         <div class="chartbox tall"><canvas id="c8"></canvas></div>
       </div>
       <div class="card">
-        <h2>Risco econômico distribuído por pedido</h2>
-        <div class="cs">Valores conciliados com a contingência total. Dê duplo clique em uma barra para ver quem compõe o valor e o andamento dos processos.</div>
+        <h2>Valor da causa distribuído por pedido</h2>
+        <div class="cs">Rateio gerencial do valor da causa entre os pedidos identificados, sem duplicar o processo. Dê duplo clique para ver a composição.</div>
         <div class="chartbox tall"><canvas id="c9"></canvas></div>
         <div class="hint" id="c9Recon"></div>
       </div>
@@ -312,13 +332,13 @@ body.sem-dados #empty{display:block}
   <!-- EVOLUCAO -->
   <section class="pane" id="p6">
     <div class="card">
-      <h2>Evolução do valor envolvido por classificação de risco</h2>
-      <div class="cs">Série mensal do relatório de contingenciamento. Respeita os filtros da lateral. Processos sem série histórica (relatório do escritório) não entram neste gráfico.</div>
-      <div class="chartbox tall"><canvas id="c12"></canvas></div>
+      <h2>Evolução mensal do valor da causa</h2>
+      <div class="cs">Somente valores da causa informados por competência. Não usa risco econômico para substituir um histórico ausente.</div>
+      <div class="chartbox tall"><canvas id="c12"></canvas></div><div class="hint" id="c12Hint"></div>
     </div>
     <div class="card">
       <h2>Fechamento por mês</h2>
-      <div class="cs">Últimos meses da série, com a provisão sugerida no critério do próprio relatório: Provável mais Possível acima de 50%.</div>
+      <div class="cs">Últimos meses da série. A base de provisão considera somente Provável; arquivados não compõem os valores.</div>
       <div id="tabEvo"></div>
     </div>
     <div class="card">
@@ -332,7 +352,7 @@ body.sem-dados #empty{display:block}
   <section class="pane" id="p5">
     <div class="card">
       <h2>Como este leitor interpreta a planilha</h2>
-      <div class="cs">Transparência de cálculo. Nada aqui é estimado por conta própria: tudo vem das colunas do relatório.</div>
+      <div class="cs">Transparência de cálculo. Os valores dos processos vêm das colunas do relatório; o rateio gerencial por categoria de pedido é declarado abaixo.</div>
       <div class="sec">
         <h4>Origem dos números</h4>
         <div class="txt" id="metOrigem"></div>
@@ -354,7 +374,11 @@ Cabeçalhos desconhecidos não são descartados. Eles ficam preservados em Colun
 Possível: obrigação possível, mas não provável. Não se provisiona; divulga-se em nota explicativa.
 Remoto: chance remota de perda. Não se provisiona nem se divulga.
 
-Provisão sugerida: o relatório mensal adota Provável mais Possível acima de 50%, e é esse o critério usado no indicador. No layout escritório, onde não existe a faixa acima de 50%, a provisão sugerida equivale ao Provável.</div>
+Critério gerencial definido para este controle: a base de provisão considera somente os valores da coluna Provável. Possível acima de 50% continua disponível para análise, sem somar à base de provisão. A decisão de contabilização cabe ao Financeiro.
+
+Arquivados/encerrados são lidos e preservados para consulta, com prognóstico Arquivado / sem risco. Não compõem os totais de causa, risco ou provisão, nem a evolução financeira consolidada. Valores originais permanecem visíveis nas fichas e na exportação como histórico.
+
+Valor da causa é lido somente do campo correspondente. Se estiver ausente, não é estimado nem substituído por risco econômico; a quantidade sem valor informado aparece na primeira faixa.</div>
       </div>
       <div class="sec">
         <h4>Dados, template e reset</h4>
@@ -367,7 +391,8 @@ O botão Resetar dados elimina os arquivos carregados, filtros, gráficos e regi
       <div class="sec">
         <h4>Heurísticas declaradas</h4>
         <div class="txt">1. Classificação de pedidos: o campo Objeto é texto livre. O leitor aplica um dicionário de expressões (horas extras, FGTS, dano moral, verbas rescisórias, etc.). Pedidos fora do dicionário caem em "Outros pedidos".
-2. Risco por pedido: valores detalhados por pedido são utilizados quando disponíveis. Se o arquivo trouxer apenas o risco total e o Objeto, o valor é rateado igualmente entre as categorias identificadas. A soma do risco atribuído concilia com a contingência filtrada, sem repetir o valor integral do processo em cada pedido.
+2. Valor da causa por pedido: o total da causa é rateado igualmente entre as categorias identificadas, com ajuste do resíduo no último item. É um rateio gerencial declarado, não o valor individual dos pedidos da petição. Valores detalhados de risco não são utilizados como causa nem como pesos.
+7. Gráficos monetários: usam somente Valor da Causa; os gráficos de quantidade e prazo preservam suas unidades. A evolução mensal exige valor da causa explícito em cada competência; não repete o valor atual como se fosse histórico nem usa contingência como substituto.
 3. Garantias e depósitos: extraídos por expressão regular sobre o campo Garantia (padrão R$ 0.000,00). Somam depósito recursal, custas e valores de execução ali informados.
 4. Linha do tempo: o campo Andamento é fatiado por marcadores de data no formato "Em dd/mm/aa". Trechos sem data ficam no bloco inicial.
 5. Datas futuras: qualquer data posterior a hoje encontrada no andamento é listada como evento previsto. Não substitui o controle do escritório.
@@ -469,37 +494,20 @@ function classificarPedidos(txt){
   return out;
 }
 
-/*
-  Distribui o risco de cada processo entre seus pedidos sem duplicar a
-  contingência. Quando o layout traz valores por pedido, eles são usados e
-  reconciliados ao risco total do processo. Nos layouts com apenas Objeto em
-  texto livre, o risco é rateado igualmente entre as categorias identificadas.
-*/
-function riscoDistribuidoPorPedido(r){
-  const total=Math.max(0,Number(r.rTot)||0);
+/* Rateio gerencial do valor da causa por categoria de pedido.
+   Não representa valor individual pedido pelo reclamante: a fonte informa o total do processo.
+   O último pedido recebe o resíduo, mantendo a soma igual ao valor original. */
+function causaDistribuidaPorPedido(r){
+  if(!compoeCustos(r)||!r.vcInformado||!r.vc)return {};
   const categorias=[...new Set((r.pedidos||[]).filter(Boolean))];
-  if(!total||!categorias.length)return {};
-
-  const detalhados=Array.isArray(r.pedidosDet)?r.pedidosDet:[];
-  const porPedido={};
-  detalhados.forEach(d=>{
-    const valor=Math.max(0,parseNum(d&&d.valor));
-    const cats=[...new Set(classificarPedidos(d&&d.pedido).filter(Boolean))];
-    if(!valor||!cats.length)return;
-    const parcela=valor/cats.length;
-    cats.forEach(p=>porPedido[p]=(porPedido[p]||0)+parcela);
+  if(!categorias.length)categorias.push('Sem pedido identificado');
+  const parcela=Math.trunc(r.vc*100/categorias.length)/100, out={};
+  let atribuido=0;
+  categorias.forEach((p,i)=>{
+    const valor=i===categorias.length-1?r.vc-atribuido:parcela;
+    out[p]=valor;atribuido+=valor;
   });
-
-  const somaDetalhada=Object.values(porPedido).reduce((s,v)=>s+v,0);
-  if(somaDetalhada>0){
-    const fator=total/somaDetalhada;
-    Object.keys(porPedido).forEach(p=>porPedido[p]*=fator);
-    return porPedido;
-  }
-
-  const parcela=total/categorias.length;
-  categorias.forEach(p=>porPedido[p]=parcela);
-  return porPedido;
+  return out;
 }
 
 /* ---------- normalização de registro ---------- */
@@ -539,14 +547,22 @@ function datasFuturas(txt){
   return [...set];
 }
 
+function registroArquivado(r){
+  const encerrado=v=>/arquiv|encerr|baixad|finaliz/i.test(String(v||'')) && !/n[aã]o\s+(arquiv|encerr|baixad|finaliz)/i.test(String(v||''));
+  return encerrado(r.status) || !!parseData(r.arquivamento) || encerrado(r.aba)
+    || encerrado(r.prognostico);
+}
+const compoeCustos = r => r.status!=='Arquivado';
+const baseCustos = arr => arr.filter(compoeCustos);
+
 function normalizar(r,i){
   const o={...r};
   o.id=i;
   o.extras=r.extras||{};
   const st=String(r.status||'').trim();
-  o.status = /arquiv|encerr|baixad|finaliz/i.test(st) ? 'Arquivado'
+  o.status = registroArquivado(r) ? 'Arquivado'
     : /ativ|andamento|abert|pendente/i.test(st) ? 'Ativo'
-    : (r.arquivamento ? 'Arquivado' : (st || 'Não informado'));
+    : (st || 'Não informado');
   o.reclamante=String(r.reclamante||'(sem identificação)').trim();
   o.cpj=String(r.cpj||'-').trim();
   o.reclamada=String(r.reclamada||'Não informada').trim();
@@ -557,15 +573,18 @@ function normalizar(r,i){
   o.andamento=String(r.andamento||'').trim();
   o.condenacao=String(r.condenacao||'').trim();
   o.garantia=String(r.garantia||'').trim();
+  o.vcInformado=r.valorCausa!=null && String(r.valorCausa).trim()!=='' && !/^(?:-|n\/a|n[aã]o informado)$/i.test(String(r.valorCausa).trim());
   o.vc=parseNum(r.valorCausa);
   o.rRem=parseNum(r.riscoRemoto); o.rPos=parseNum(r.riscoPossivel);
   o.rPos50=parseNum(r.riscoPossivel50); o.rPro=parseNum(r.riscoProvavel);
   o.rTot=parseNum(r.riscoTotal) || (o.rRem+o.rPos+o.rPos50+o.rPro);
-  o.prov=o.rPro+o.rPos50; // provisão sugerida: provável + possível acima de 50%
+  o.prov=compoeCustos(o)?o.rPro:0; // critério da reunião: somente provável, excluindo arquivados
   o.prog=String(r.prognostico||'').toUpperCase().trim();
   if(!o.prog){
     o.prog=o.rPro>0?'PROVÁVEL':o.rPos50>0?'POSSÍVEL (>50%)':o.rPos>0?'POSSÍVEL (<50%)':o.rRem>0?'REMOTO':'NÃO CLASSIFICADO';
   }
+  o.progOriginal=o.prog;
+  if(!compoeCustos(o))o.prog='ARQUIVADO / SEM RISCO';
   o.fonte=String(r.fonte||'-');
   o.layout=r.layout||'A';
   o.serie=r.serie||null;
@@ -590,23 +609,27 @@ let RAW=[], FONTES=[], TODOS=[], PRE=[], FILT=[], CHARTS={}, SORT={c:'rTot',d:-1
 /* KPI clicável: cada card é um filtro. O predicado roda sobre a base já filtrada na lateral. */
 const KPIPRED={
   todos:()=>true,
+  causa:r=>compoeCustos(r)&&r.vcInformado,
+  provavelValor:r=>compoeCustos(r)&&r.rPro>0,
   vcAlto:(r,c)=>r.vc>c.vcMedia,
-  comRisco:r=>r.rTot>0,
+  comRisco:r=>compoeCustos(r)&&r.rTot>0,
   provisao:r=>r.prov>0,
   'PROVÁVEL':r=>r.prog==='PROVÁVEL',
-  'POSSÍVEL':r=>String(r.prog).startsWith('POSSÍVEL'),
-  'REMOTO':r=>r.prog==='REMOTO',
+  'POSSÍVEL':r=>compoeCustos(r)&&(r.rPos>0||r.rPos50>0),
+  'REMOTO':r=>compoeCustos(r)&&r.rRem>0,
   comGar:r=>r.gar>0,
   lagAlto:(r,c)=>r.lag!=null&&r.lag>c.lagMedia
 };
 const KPIROT={
   todos:'',
+  causa:'Processos com valor da causa informado (sem arquivados)',
+  provavelValor:'Processos com valor provável (sem arquivados)',
   vcAlto:'Valor da causa acima da média',
   comRisco:'Com risco econômico reconhecido',
   provisao:'Processos que geram provisão',
   'PROVÁVEL':'Prognóstico provável',
-  'POSSÍVEL':'Prognóstico possível (qualquer faixa)',
-  'REMOTO':'Prognóstico remoto',
+  'POSSÍVEL':'Processos com valor possível (qualquer faixa)',
+  'REMOTO':'Processos com valor remoto',
   comGar:'Com garantia ou depósito em juízo',
   lagAlto:'Ajuizamento acima do prazo médio'
 };
@@ -628,6 +651,7 @@ const COLS=[
   {k:'trt',t:'Regional'},
   {k:'vc',t:'Valor da causa',n:1},
   {k:'rTot',t:'Risco econômico',n:1},
+  {k:'rPro',t:'Valor provável',n:1},
   {k:'prog',t:'Prognóstico'},
   {k:'gar',t:'Garantias',n:1},
   {k:'status',t:'Situação'}
@@ -648,7 +672,7 @@ function render(){
   document.body.classList.toggle('sem-dados',vazio);
   if(vazio){
     destroy();
-    document.getElementById('kpis').innerHTML='';
+    ['kpis','kpisCausa','kpisProvavel','escopoCustos'].forEach(id=>document.getElementById(id).innerHTML='');
     document.getElementById('bAl').textContent='0';
     document.getElementById('emptyRestore').innerHTML='<div class="note">Use <b>Baixar template</b> para enviar um modelo padronizado a outro escritório.</div>';
     return;
@@ -721,14 +745,15 @@ function aplicar(){
     }
     return true;
   });
-  CTX=statsCtx(PRE);
+  CTX=statsCtx(baseCustos(PRE));
   const pred = (KPISEL && KPIPRED[KPISEL]) ? KPIPRED[KPISEL] : (()=>true);
   FILT=PRE.filter(r=>pred(r,CTX));
   render();
 }
 
 /* ---------- agregações ---------- */
-const S=(a,k)=>a.reduce((s,r)=>s+(r[k]||0),0);
+const CAMPOS_CUSTO=new Set(['vc','rTot','rPro','rPos','rPos50','rRem','prov']);
+const S=(a,k,historico=false)=>(historico||!CAMPOS_CUSTO.has(k)?a:baseCustos(a)).reduce((s,r)=>s+(Number(r[k])||0),0);
 function grupo(arr,keyFn,valFn){
   const m=new Map();
   arr.forEach(r=>{const k=keyFn(r); m.set(k,(m.get(k)||0)+(valFn?valFn(r):1));});
@@ -738,7 +763,7 @@ function grupo(arr,keyFn,valFn){
 /* ---------- render ---------- */
 /* Série mensal agregada sobre os processos filtrados que possuem histórico (layout mensal). */
 function serieAgregada(arr){
-  const com=arr.filter(r=>r.serie&&r.serie.length);
+  const com=baseCustos(arr).filter(r=>r.serie&&r.serie.length);
   if(!com.length) return {meses:[],linhas:[]};
   const meses=com[0].serie.map(s=>s.mes);
   const linhas=meses.map((m,i)=>{
@@ -747,45 +772,39 @@ function serieAgregada(arr){
       const s=r.serie[i]; if(!s) return;
       o.rem+=s.rem; o.pos+=s.pos; o.pos50+=s.pos50; o.pro+=s.pro; o.tot+=s.tot;
     });
-    o.prov=o.pro+o.pos50;
+    o.prov=o.pro;
     return o;
   });
   return {meses,linhas,qtd:com.length};
 }
+function renderGraficoCausaMensal(){
+  const processos=baseCustos(FILT);
+  const meses=[...new Set(processos.flatMap(r=>(r.serie||[]).filter(x=>x.vc!=null).map(x=>x.mes)))].sort((a,b)=>(mesInfo(a)?.key||0)-(mesInfo(b)?.key||0));
+  const dados=meses.map(m=>processos.reduce((s,r)=>s+((r.serie||[]).find(x=>x.mes===m)?.vc||0),0));
+  document.getElementById('c12Hint').textContent=meses.length
+    ? 'Somente valores da causa informados por mês. Arquivados fora dos totais.'
+    : 'A seleção não possui histórico mensal de Valor da Causa. O risco histórico não é usado como substituto; continua disponível na tabela abaixo.';
+  CHARTS.c12=new Chart(document.getElementById('c12'),{type:'line',
+    data:{labels:meses,datasets:[{label:'Valor da causa',data:dados,borderColor:C.p,backgroundColor:'rgba(0,131,202,.10)',fill:true,tension:.25,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},datalabels:{display:false},tooltip:{callbacks:{label:c=>'Valor da causa: '+brl(c.raw)}}},
+      scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'#eee'},ticks:{callback:v=>brlc(v)}}}},plugins:[window.ChartDataLabels]});
+  ligarDuploCliqueGrafico(document.getElementById('c12'),CHARTS.c12,(hit,mes)=>
+    abrirGrupoGrafico('Valor da causa · '+mes,processos.filter(r=>(r.serie||[]).some(x=>x.mes===mes&&x.vc!=null)),
+      r=>(r.serie||[]).find(x=>x.mes===mes)?.vc||0,'Valor da causa no mês'),false);
+}
 function renderEvolucao(){
   const {meses,linhas,qtd}=serieAgregada(FILT);
   if(CHARTS.c12){CHARTS.c12.destroy();CHARTS.c12=null;}
+  renderGraficoCausaMensal();
   if(!linhas || !linhas.length){
     document.getElementById('tabEvo').innerHTML='<div class="hint">Nenhum processo da seleção possui série mensal. A série existe apenas no relatório mensal de contingenciamento.</div>';
     document.getElementById('confEvo').innerHTML='<div class="hint">Sem série mensal na seleção.</div>';
     return;
   }
-  const D=window.ChartDataLabels;
-  const ds=[
-    {label:'Remoto',data:linhas.map(l=>l.rem),borderColor:C.lt,backgroundColor:'rgba(110,180,220,.35)',fill:true},
-    {label:'Possível (<50%)',data:linhas.map(l=>l.pos),borderColor:C.p,backgroundColor:'rgba(0,131,202,.30)',fill:true},
-    {label:'Possível (>50%)',data:linhas.map(l=>l.pos50),borderColor:C.ac2,backgroundColor:'rgba(140,50,30,.35)',fill:true},
-    {label:'Provável',data:linhas.map(l=>l.pro),borderColor:C.ac,backgroundColor:'rgba(125,0,65,.45)',fill:true}
-  ].map(d=>({...d,type:'line',tension:.25,pointRadius:0,pointHoverRadius:4,borderWidth:1.5}));
-  CHARTS.c12=new Chart(document.getElementById('c12'),{
-    data:{labels:meses,datasets:ds},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'bottom',labels:{color:C.tx,font:{family:'Roboto',size:11},boxWidth:12,usePointStyle:true}},
-        datalabels:{display:false},
-        tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw),
-          footer:it=>'Total: '+brl(it.reduce((a,x)=>a+x.raw,0))}}},
-      scales:{x:{stacked:true,grid:{display:false},ticks:{color:C.mu,maxRotation:60,minRotation:45,autoSkip:true,maxTicksLimit:18,font:{size:9}}},
-              y:{stacked:true,grid:{color:'#eee'},ticks:{color:C.mu,callback:v=>brlc(v)}}}},plugins:[D]});
-  ligarDuploCliqueGrafico(document.getElementById('c12'),CHARTS.c12,hit=>{
-    const chaves=['rem','pos','pos50','pro'];
-    const chave=chaves[hit.datasetIndex],mes=meses[hit.index],rotulo=ds[hit.datasetIndex].label;
-    const comValor=FILT.filter(r=>r.serie&&r.serie[hit.index]&&Number(r.serie[hit.index][chave])>0);
-    abrirGrupoGrafico('Evolução mensal · '+rotulo+' · '+mes,comValor,r=>r.serie[hit.index][chave]||0,'Valor no mês');
-  },false);
-
   const ult=linhas.slice(-13).reverse();
   document.getElementById('tabEvo').innerHTML=`<div class="tw"><table>
-    <thead><tr><th>Mês</th><th>Remoto</th><th>Possível (&lt;50%)</th><th>Possível (&gt;50%)</th><th>Provável</th><th>Total envolvido</th><th>Provisão sugerida</th><th>Variação</th></tr></thead>
+    <thead><tr><th>Mês</th><th>Remoto</th><th>Possível (&lt;50%)</th><th>Possível (&gt;50%)</th><th>Provável</th><th>Total envolvido</th><th>Base de provisão (provável)</th><th>Variação</th></tr></thead>
     <tbody>${ult.map((l,i)=>{
       const ant=ult[i+1]; const dv=ant?l.tot-ant.tot:null;
       return `<tr style="cursor:default"><td><b>${esc(l.mes)}</b></td><td class="num">${brl(l.rem)}</td><td class="num">${brl(l.pos)}</td>
@@ -793,15 +812,15 @@ function renderEvolucao(){
       <td class="num" style="color:var(--ac)">${brl(l.prov)}</td>
       <td class="num" style="color:${dv==null?'var(--mu)':(dv>0?'var(--ac2)':'var(--md)')}">${dv==null?'-':(dv>0?'+':'')+brl(dv)}</td></tr>`;
     }).join('')}</tbody></table></div>
-    <div class="note">${qtd} processo(s) com histórico na seleção. A provisão sugerida segue o critério do relatório: Provável mais Possível acima de 50%.</div>`;
+    <div class="note">${qtd} processo(s) com histórico na seleção. A base de provisão considera somente Provável. Arquivados ficam fora da série consolidada; sua evolução original permanece na ficha.</div>`;
 
   // conferência contra os totais que a planilha declara
   const linhasConf=[];
-  FONTES.filter(f=>f.layout==='B').forEach(f=>{
+  FONTES.filter(f=>Object.keys(f.totais||{}).length).forEach(f=>{
     const ultMes=f.meses[f.meses.length-1];
     const decl=(f.totais&&f.totais[ultMes])||{};
     const daAba=TODOS.filter(r=>r.fonte===f.fonte && r.aba===f.aba);
-    const calc={rem:S(daAba,'rRem'),pos:S(daAba,'rPos'),pos50:S(daAba,'rPos50'),pro:S(daAba,'rPro'),tot:S(daAba,'rTot')};
+    const calc={rem:S(daAba,'rRem',true),pos:S(daAba,'rPos',true),pos50:S(daAba,'rPos50',true),pro:S(daAba,'rPro',true),tot:S(daAba,'rTot',true)};
     const dif=(calc.tot||0)-(decl.total||0);
     linhasConf.push({f,ultMes,decl,calc,dif,daAba});
   });
@@ -816,44 +835,50 @@ function renderEvolucao(){
 }
 function renderMini(){
   document.getElementById('mQtd').textContent=FILT.length;
-  document.getElementById('mVc').textContent=brlc(S(FILT,'vc'));
-  document.getElementById('mRe').textContent=brlc(S(FILT,'rTot'));
-  document.getElementById('mPv').textContent=brlc(S(FILT,'prov'));
-  document.getElementById('mPr').textContent=brlc(S(FILT,'rPro'));
-  document.getElementById('mPo').textContent=brlc(S(FILT,'rPos')+S(FILT,'rPos50'));
-  document.getElementById('mRm').textContent=brlc(S(FILT,'rRem'));
-  document.getElementById('mGa').textContent=brlc(S(FILT,'gar'));
+  document.getElementById('mVc').textContent=brl(S(FILT,'vc'));
+  document.getElementById('mRe').textContent=brl(S(FILT,'rTot'));
+  document.getElementById('mPv').textContent=brl(S(FILT,'prov'));
+  document.getElementById('mPr').textContent=brl(S(FILT,'rPro'));
+  document.getElementById('mPo').textContent=brl(S(FILT,'rPos')+S(FILT,'rPos50'));
+  document.getElementById('mRm').textContent=brl(S(FILT,'rRem'));
+  document.getElementById('mGa').textContent=brl(S(FILT,'gar'));
 }
 function renderKpis(){
-  const B=PRE; // KPIs sempre sobre a base dos filtros laterais, para o card continuar clicável e comparável
-  const n=B.length, vc=S(B,'vc'), rt=S(B,'rTot'), pr=S(B,'rPro'), p50=S(B,'rPos50'), po=S(B,'rPos')+p50, rm=S(B,'rRem'), ga=S(B,'gar');
-  const prov=S(B,'prov');
-  const ativos=TODOS.filter(r=>r.status==='Ativo').length;
-  const nGar=B.filter(r=>r.gar>0).length;
-  const nVc=B.filter(r=>r.vc>CTX.vcMedia).length;
-  const nRis=B.filter(r=>r.rTot>0).length;
-  const nProv=B.filter(r=>r.prov>0).length;
-  const nLag=B.filter(r=>r.lag!=null&&r.lag>CTX.lagMedia).length;
-  const cnt=p=>B.filter(r=>r.prog===p).length;
-  const cntPos=B.filter(r=>String(r.prog).startsWith('POSSÍVEL')).length;
-  const lagMed=CTX.lagMedia?Math.round(CTX.lagMedia):null;
-  const k=[
-    {id:'todos',t:'Processos na seleção',v:n,d:ativos+' ativos na base · clique para limpar'},
-    {id:'comRisco',t:'Risco econômico total',v:brlc(rt),d:nRis+' processo(s) com risco reconhecido'},
-    {id:'provisao',t:'Provisão sugerida',v:brlc(prov),d:'Provável + Possível acima de 50% · '+nProv+' processo(s)',c:'prov'},
-    {id:'PROVÁVEL',t:'Provável',v:brlc(pr),d:'Impacta o balanço · '+cnt('PROVÁVEL')+' processo(s)',c:'prov'},
-    {id:'POSSÍVEL',t:'Possível',v:brlc(po),d:(p50>0?('sendo '+brlc(p50)+' acima de 50% · '):'Nota explicativa · ')+cntPos+' processo(s)',c:'poss'},
-    {id:'REMOTO',t:'Remoto',v:brlc(rm),d:'Sem provisão nem nota · '+cnt('REMOTO')+' processo(s)',c:'rem'},
-    {id:'vcAlto',t:'Valor da causa (pedido)',v:brlc(vc),d:'Média '+brlc(n?vc/n:0)+' · '+nVc+' acima'},
-    {id:'comGar',t:'Garantias e depósitos',v:brlc(ga),d:'Capital em juízo · '+nGar+' processo(s)'},
-    {id:'lagAlto',t:'Prazo médio até o ajuizamento',v:lagMed!=null?(lagMed+' dias'):'-',d:'Da demissão à distribuição · '+nLag+' acima'}
-  ];
-  document.getElementById('kpis').innerHTML=k.map(x=>
-    `<div class="kpi ${x.c||''} ${KPISEL===x.id?'sel':''}" onclick="selKpi('${x.id}')" title="Clique para filtrar">
-      <div class="t">${x.t}</div><div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
-  document.getElementById('fAtivo').innerHTML = KPISEL
+  const B=baseCustos(FILT), n=B.length, vc=S(B,'vc'), pr=S(B,'rPro');
+  const comCausa=B.filter(r=>r.vcInformado), comProvavel=B.filter(r=>r.rPro>0);
+  const arq=FILT.filter(r=>!compoeCustos(r)).length;
+  const cards=k=>k.map(x=>`<div class="kpi ${x.c||''} ${KPISEL===x.id?'sel':''}" onclick="clicarKpi(event,'${x.id}')" ondblclick="investigarKpi('${x.id}')" title="Clique para filtrar; duplo clique para ver a composição">
+    <div class="t">${x.t}</div><div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+  document.getElementById('kpisCausa').innerHTML=cards([
+    {id:'causa',t:'Valor total da causa',v:brl(vc),d:comCausa.length+' processo(s) com valor informado'},
+    {id:'todos',t:'Processos que compõem os valores',v:n,d:(n-comCausa.length)+' sem valor da causa informado'},
+    {id:'causa',t:'Valor médio da causa',v:brl(comCausa.length?vc/comCausa.length:0),d:'Média somente dos valores informados'}
+  ]);
+  document.getElementById('kpisProvavel').innerHTML=cards([
+    {id:'provavelValor',t:'Valor total provável',v:brl(pr),d:'Base de provisão · somente provável',c:'prov'},
+    {id:'provavelValor',t:'Processos com valor provável',v:comProvavel.length,d:'Processos com valor na coluna Provável',c:'prov'},
+    {id:'provavelValor',t:'Valor médio provável',v:brl(comProvavel.length?pr/comProvavel.length:0),d:'Média dos processos com valor provável',c:'prov'}
+  ]);
+  document.getElementById('escopoCustos').textContent=FILT.length+' processo(s) na consulta · '+arq+' arquivado(s), fora dos totais financeiros. Valores da causa e provável são medidas distintas e não são somados. Garantias são exibidas separadamente. Clique nos cards para filtrar e dê duplo clique para ver a composição.';
+  document.getElementById('kpis').innerHTML=cards([
+    {id:'comRisco',t:'Risco econômico total',v:brl(S(B,'rTot')),d:'Estimativa do escritório · fora do total da causa'},
+    {id:'POSSÍVEL',t:'Possível',v:brl(S(B,'rPos')+S(B,'rPos50')),d:'Não compõe a base de provisão',c:'poss'},
+    {id:'REMOTO',t:'Remoto',v:brl(S(B,'rRem')),d:'Arquivados não são classificados como remoto',c:'rem'},
+    {id:'comGar',t:'Garantias e depósitos',v:brl(S(FILT,'gar')),d:'Capital em juízo · separado de custo e provisão'},
+    {id:'lagAlto',t:'Prazo médio até o ajuizamento',v:CTX.lagMedia?Math.round(CTX.lagMedia)+' dias':'-',d:'Da demissão à distribuição'}
+  ]);
+  document.getElementById('fAtivo').innerHTML=KPISEL
     ? `<div class="chipf"><span>Filtro: ${esc(KPIROT[KPISEL]||KPISEL)}</span><button onclick="selKpi(null)" title="Remover filtro">&times;</button></div>` : '';
 }
+function abrirComposicaoKpi(id){
+  const B=baseCustos(FILT);
+  if(id==='causa')abrirGrupoGrafico('Composição · valor da causa',B.filter(r=>r.vcInformado),r=>r.vc,'Valor da causa');
+  else if(id==='provavelValor')abrirGrupoGrafico('Composição · valor provável',B.filter(r=>r.rPro>0),r=>r.rPro,'Valor provável');
+  else abrirGrupoGrafico('Composição · '+(KPIROT[id]||'Processos'),FILT);
+}
+let KPI_TIMER=null;
+function clicarKpi(e,id){clearTimeout(KPI_TIMER);if(e.detail===1)KPI_TIMER=setTimeout(()=>selKpi(id),500);}
+function investigarKpi(id){clearTimeout(KPI_TIMER);abrirComposicaoKpi(id);}
 function selKpi(p){ KPISEL = (!p || p==='todos' || KPISEL===p) ? null : p; aplicar(); }
 
 function renderTabela(){
@@ -876,11 +901,12 @@ function renderTabela(){
       <td>${esc(r.trt)}</td>
       <td class="num">${brl(r.vc)}</td>
       <td class="num"><b>${brl(r.rTot)}</b></td>
+      <td class="num">${brl(r.rPro)}</td>
       <td><span class="tag ${cls}">${esc(r.prog)}</span></td>
       <td class="num">${r.gar?brl(r.gar):'-'}</td>
       <td><span class="tag ${r.status==='Ativo'?'t-atv':'t-arq'}">${esc(r.status)}</span></td>
-    </tr>`;}).join('') || '<tr><td colspan="11" style="padding:20px;text-align:center;color:#646464">Nenhum processo atende aos filtros.</td></tr>';
-  document.getElementById('tFoot').textContent=`${arr.length} processo(s) · valor da causa ${brl(S(arr,'vc'))} · risco econômico ${brl(S(arr,'rTot'))}`;
+    </tr>`;}).join('') || '<tr><td colspan="12" style="padding:20px;text-align:center;color:#646464">Nenhum processo atende aos filtros.</td></tr>';
+  document.getElementById('tFoot').textContent=`${arr.length} processo(s) na consulta · totais sem arquivados: causa ${brl(S(arr,'vc'))} · provável ${brl(S(arr,'rPro'))} · risco econômico ${brl(S(arr,'rTot'))}. Valores nas linhas arquivadas são históricos.`;
 }
 function ordenar(c){ if(SORT.c===c) SORT.d*=-1; else {SORT.c=c;SORT.d=-1;} renderTabela(); }
 
@@ -907,40 +933,39 @@ function ligarDuploCliquePedido(canvas,chart){
 
 function renderCharts(){
   destroy();
+  const CUSTOS=baseCustos(FILT);
   const D=window.ChartDataLabels;
 
   // 1 doughnut prognostico
-  const gp=[['PROVÁVEL',S(FILT,'rPro')],['POSSÍVEL (>50%)',S(FILT,'rPos50')],['POSSÍVEL (<50%)',S(FILT,'rPos')],['REMOTO',S(FILT,'rRem')]].filter(x=>x[1]>0);
+  const gp=grupo(CUSTOS,r=>r.prog,r=>r.vc).filter(x=>x[1]>0);
   const tp=gp.reduce((a,b)=>a+b[1],0)||1;
   CHARTS.c1=new Chart(document.getElementById('c1'),{type:'doughnut',
-    data:{labels:gp.map(x=>x[0]),datasets:[{data:gp.map(x=>x[1]),backgroundColor:gp.map(x=>corProg(x[0])),borderWidth:2,borderColor:'#fff'}]},
+    data:{labels:gp.map(x=>x[0]),datasets:[{label:'Valor da causa',data:gp.map(x=>x[1]),backgroundColor:gp.map(x=>corProg(x[0])),borderWidth:2,borderColor:'#fff'}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
       plugins:{legend:{position:'bottom',labels:{color:C.tx,font:{family:'Roboto',size:12},padding:12,boxWidth:12}},
         datalabels:{color:'#fff',font:{family:'Roboto',size:11,weight:'700'},
           formatter:(v)=>((v/tp)*100).toFixed(1)+'%'},
         tooltip:{callbacks:{label:c=>c.label+': '+brl(c.raw)}}}},plugins:[D]});
   ligarDuploCliqueGrafico(document.getElementById('c1'),CHARTS.c1,(hit,rotulo)=>{
-    const chaves={'PROVÁVEL':'rPro','POSSÍVEL (>50%)':'rPos50','POSSÍVEL (<50%)':'rPos','REMOTO':'rRem'};
-    const chave=chaves[rotulo];
-    abrirGrupoGrafico('Exposição '+rotulo,FILT.filter(r=>chave&&r[chave]>0),r=>r[chave]||0,'Valor nesta classificação');
+    abrirGrupoGrafico('Valor da causa · '+rotulo,CUSTOS.filter(r=>r.prog===rotulo),r=>r.vc,'Valor da causa');
   });
 
   // 2 empresa
-  const ge=grupo(FILT,r=>r.empresa,r=>r.rTot).filter(x=>x[1]>0);
+  const ge=grupo(CUSTOS,r=>r.empresa,r=>r.vc).filter(x=>x[1]>0);
   CHARTS.c2=new Chart(document.getElementById('c2'),{type:'bar',
-    data:{labels:ge.map(x=>x[0]),datasets:[{data:ge.map(x=>x[1]),backgroundColor:C.p,borderRadius:2,maxBarThickness:70}]},
+    data:{labels:ge.map(x=>x[0]),datasets:[{label:'Valor da causa',data:ge.map(x=>x[1]),backgroundColor:C.p,borderRadius:2,maxBarThickness:70}]},
     options:{...clone(BASEOPT),plugins:{legend:{display:false},
       datalabels:{anchor:'end',align:'top',color:C.dk,font:{family:'Roboto',size:10,weight:'500'},formatter:v=>brlc(v)},
       tooltip:{callbacks:{label:c=>brl(c.raw)}}},
       scales:{x:{grid:{display:false},ticks:{color:C.mu}},y:{grid:{color:'#eee'},ticks:{color:C.mu,callback:v=>brlc(v)}}}},plugins:[D]});
   ligarDuploCliqueGrafico(document.getElementById('c2'),CHARTS.c2,(hit,rotulo)=>
-    abrirGrupoGrafico('Empresa reclamada · '+rotulo,FILT.filter(r=>r.empresa===rotulo),r=>r.rTot,'Risco econômico'));
+    abrirGrupoGrafico('Empresa reclamada · '+rotulo,CUSTOS.filter(r=>r.empresa===rotulo),r=>r.vc,'Valor da causa'));
 
   // 3 ranking processos
-  const gr=[...FILT].filter(r=>r.rTot>0).sort((a,b)=>b.rTot-a.rTot).slice(0,12);
+  const gr=[...CUSTOS].filter(r=>r.vc>0).sort((a,b)=>b.vc-a.vc).slice(0,12);
   CHARTS.c3=new Chart(document.getElementById('c3'),{type:'bar',
     data:{labels:gr.map(r=>r.reclamante.length>28?r.reclamante.slice(0,26)+'…':r.reclamante),
-      datasets:[{data:gr.map(r=>r.rTot),backgroundColor:gr.map(r=>corProg(r.prog)),borderRadius:2}]},
+      datasets:[{label:'Valor da causa',data:gr.map(r=>r.vc),backgroundColor:gr.map(r=>corProg(r.prog)),borderRadius:2}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},
         datalabels:{anchor:'end',align:'right',color:C.dk,font:{family:'Roboto',size:10,weight:'500'},formatter:v=>brlc(v)},
@@ -956,7 +981,7 @@ function renderCharts(){
     options:{...clone(BASEOPT),plugins:{legend:{display:false},datalabels:{anchor:'end',align:'top',color:C.dk}},
       scales:{x:{grid:{display:false},ticks:{color:C.mu}},y:{beginAtZero:true,grid:{color:'#eee'},ticks:{precision:0,color:C.mu}}}},plugins:[D]});
   ligarDuploCliqueGrafico(document.getElementById('c4'),CHARTS.c4,(hit,rotulo)=>
-    abrirGrupoGrafico('Fase processual · '+rotulo,FILT.filter(r=>(r.fase||'Não informada')===rotulo),r=>r.rTot,'Risco econômico'));
+    abrirGrupoGrafico('Fase processual · '+rotulo,FILT.filter(r=>(r.fase||'Não informada')===rotulo),r=>r.vc,'Valor da causa'));
 
   // 5 trt
   const gt=grupo(FILT,r=>r.trt);
@@ -965,7 +990,7 @@ function renderCharts(){
     options:{...clone(BASEOPT),plugins:{legend:{display:false},datalabels:{anchor:'end',align:'top',color:C.dk}},
       scales:{x:{grid:{display:false},ticks:{color:C.mu}},y:{beginAtZero:true,grid:{color:'#eee'},ticks:{precision:0,color:C.mu}}}},plugins:[D]});
   ligarDuploCliqueGrafico(document.getElementById('c5'),CHARTS.c5,(hit,rotulo)=>
-    abrirGrupoGrafico('Regional · '+rotulo,FILT.filter(r=>r.trt===rotulo),r=>r.rTot,'Risco econômico'));
+    abrirGrupoGrafico('Regional · '+rotulo,FILT.filter(r=>r.trt===rotulo),r=>r.vc,'Valor da causa'));
 
   // 6 ajuizamentos por semestre
   const gs=grupo(FILT.filter(r=>r.dDist),r=>{const d=r.dDist;return d.getUTCFullYear()+(d.getUTCMonth()<6?' S1':' S2');})
@@ -975,42 +1000,19 @@ function renderCharts(){
     options:{...clone(BASEOPT),plugins:{legend:{display:false},datalabels:{anchor:'end',align:'top',color:C.dk}},
       scales:{x:{grid:{display:false},ticks:{color:C.mu}},y:{beginAtZero:true,grid:{color:'#eee'},ticks:{precision:0,color:C.mu}}}},plugins:[D]});
   ligarDuploCliqueGrafico(document.getElementById('c6'),CHARTS.c6,(hit,rotulo)=>
-    abrirGrupoGrafico('Ajuizamentos · '+rotulo,FILT.filter(r=>r.dDist&&(r.dDist.getUTCFullYear()+(r.dDist.getUTCMonth()<6?' S1':' S2'))===rotulo),r=>r.rTot,'Risco econômico'));
+    abrirGrupoGrafico('Ajuizamentos · '+rotulo,FILT.filter(r=>r.dDist&&(r.dDist.getUTCFullYear()+(r.dDist.getUTCMonth()<6?' S1':' S2'))===rotulo),r=>r.vc,'Valor da causa'));
 
-  // 7 scatter valor da causa x risco
-  const pts=FILT.filter(r=>r.vc>0).map(r=>({x:r.vc,y:r.rTot,r:r}));
-  const n=pts.length;
-  let mx=0,my=0,sxy=0,sxx=0;
-  if(n){ mx=pts.reduce((a,p)=>a+p.x,0)/n; my=pts.reduce((a,p)=>a+p.y,0)/n;
-    pts.forEach(p=>{sxy+=(p.x-mx)*(p.y-my); sxx+=(p.x-mx)**2;}); }
-  const b1=sxx?sxy/sxx:0, b0=my-b1*mx;
-  const xs=pts.map(p=>p.x); const x0=Math.min(...xs,0), x1=Math.max(...xs,1);
-  const resid=pts.map(p=>p.y-(b0+b1*p.x));
-  const sd=n>1?Math.sqrt(resid.reduce((a,v)=>a+v*v,0)/(n-1)):0;
-  const outs=pts.filter((p,i)=>sd>0 && Math.abs(resid[i])>2*sd);
-  CHARTS.c7=new Chart(document.getElementById('c7'),{
-    data:{datasets:[
-      {type:'scatter',label:'Processos',data:pts.map(p=>({x:p.x,y:p.y,l:p.r.reclamante,pg:p.r.prog,id:p.r.id})),
-        pointRadius:7,pointHoverRadius:10,
-        backgroundColor:pts.map(p=>corProg(p.r.prog)),borderColor:'#fff',borderWidth:1.5},
-      {type:'scatter',label:'Fora da tendência',data:outs.map(p=>({x:p.x,y:p.y,l:p.r.reclamante,pg:p.r.prog,id:p.r.id})),
-        pointRadius:12,pointStyle:'triangle',backgroundColor:'rgba(125,0,65,.15)',borderColor:C.ac,borderWidth:2},
-      {type:'line',label:'Tendência',data:[{x:x0,y:b0+b1*x0},{x:x1,y:b0+b1*x1}],
-        borderColor:C.mu,borderWidth:1.5,borderDash:[6,4],pointRadius:0,fill:false}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom',labels:{usePointStyle:true,color:C.tx,font:{family:'Roboto',size:11},boxWidth:10}},
-        datalabels:{display:ctx=>ctx.datasetIndex===0 && ctx.dataset.data[ctx.dataIndex].y>0,
-          align:'top',offset:5,color:C.mu,font:{family:'Roboto',size:9},
-          formatter:(v)=>String(v.l||'').split(' ')[0]},
-        tooltip:{callbacks:{label:c=>[c.raw.l||'',' Causa: '+brl(c.raw.x),' Risco: '+brl(c.raw.y)]}}},
-      scales:{x:{type:'linear',title:{display:true,text:'Valor da causa',color:C.mu,font:{size:11}},grid:{color:'#eee'},ticks:{color:C.mu,callback:v=>brlc(v)}},
-              y:{type:'linear',title:{display:true,text:'Risco econômico',color:C.mu,font:{size:11}},grid:{color:'#eee'},ticks:{color:C.mu,callback:v=>brlc(v)}}}},
-    plugins:[D]});
-  ligarDuploCliqueGrafico(document.getElementById('c7'),CHARTS.c7,hit=>{
-    const d=CHARTS.c7.data.datasets[hit.datasetIndex].data[hit.index];
-    if(d&&d.id!=null)abrirFicha(d.id);
-  });
+  // 7 valor da causa por fase (sem medida de risco no gráfico)
+  const fasesCausa=grupo(CUSTOS,r=>r.fase||'Não informada',r=>r.vc).filter(x=>x[1]>0);
+  CHARTS.c7=new Chart(document.getElementById('c7'),{type:'bar',
+    data:{labels:fasesCausa.map(x=>x[0]),datasets:[{label:'Valor da causa',data:fasesCausa.map(x=>x[1]),backgroundColor:C.p,borderRadius:2}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},datalabels:{anchor:'end',align:'right',color:C.dk,font:{size:10},formatter:v=>brlc(v)},
+        tooltip:{callbacks:{label:c=>'Valor da causa: '+brl(c.raw)}}},
+      layout:{padding:{right:60}},
+      scales:{x:{beginAtZero:true,grid:{color:'#eee'},ticks:{color:C.mu,callback:v=>brlc(v)}},y:{grid:{display:false},ticks:{color:C.tx}}}},plugins:[D]});
+  ligarDuploCliqueGrafico(document.getElementById('c7'),CHARTS.c7,(hit,rotulo)=>
+    abrirGrupoGrafico('Valor da causa · fase '+rotulo,CUSTOS.filter(r=>(r.fase||'Não informada')===rotulo),r=>r.vc,'Valor da causa'));
 
   // 8 pedidos frequencia
   const pf=grupo(FILT.flatMap(r=>r.pedidos.map(p=>({p}))),r=>r.p).slice(0,14);
@@ -1022,17 +1024,16 @@ function renderCharts(){
       scales:{x:{beginAtZero:true,grid:{color:'#eee'},ticks:{precision:0,color:C.mu}},y:{grid:{display:false},ticks:{color:C.tx,font:{size:11}}}}},plugins:[D]});
   ligarDuploCliquePedido(document.getElementById('c8'),CHARTS.c8);
 
-  // 9 risco distribuído por pedido — a soma reconcilia com a contingência filtrada
+  // 9 valor da causa rateado por pedido — soma conciliada com causa filtrada
   const pr={};
-  FILT.forEach(r=>Object.entries(riscoDistribuidoPorPedido(r)).forEach(([p,v])=>pr[p]=(pr[p]||0)+v));
+  FILT.forEach(r=>Object.entries(causaDistribuidaPorPedido(r)).forEach(([p,v])=>pr[p]=(pr[p]||0)+v));
   const totalDistribuido=Object.values(pr).reduce((s,v)=>s+v,0);
-  const contingenciaFiltrada=FILT.reduce((s,r)=>s+Math.max(0,Number(r.rTot)||0),0);
-  const semPedido=Math.max(0,contingenciaFiltrada-totalDistribuido);
-  document.getElementById('c9Recon').textContent=`Total distribuído: ${brl(totalDistribuido)} · Contingência filtrada: ${brl(contingenciaFiltrada)}`+
-    (semPedido>0.01?` · Sem pedido identificado: ${brl(semPedido)}`:'');
+  const causaFiltrada=S(CUSTOS,'vc');
+  document.getElementById('c9Recon').textContent=`Total distribuído: ${brl(totalDistribuido)} · Valor da causa filtrado: ${brl(causaFiltrada)}`+
+    ` · Diferença: ${brl(causaFiltrada-totalDistribuido)} · Rateio gerencial; mostra até 14 categorias.`;
   const pv=Object.entries(pr).sort((a,b)=>b[1]-a[1]).slice(0,14);
   CHARTS.c9=new Chart(document.getElementById('c9'),{type:'bar',
-    data:{labels:pv.map(x=>x[0]),datasets:[{data:pv.map(x=>x[1]),backgroundColor:C.ac,borderRadius:2}]},
+    data:{labels:pv.map(x=>x[0]),datasets:[{label:'Valor da causa',data:pv.map(x=>x[1]),backgroundColor:C.ac,borderRadius:2}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},datalabels:{anchor:'end',align:'right',color:C.dk,font:{size:10},formatter:v=>brlc(v)},
         tooltip:{callbacks:{label:c=>brl(c.raw)}}},
@@ -1050,7 +1051,7 @@ function renderCharts(){
       scales:{x:{beginAtZero:true,grid:{color:'#eee'},ticks:{precision:0,color:C.mu}},y:{grid:{display:false},ticks:{color:C.tx,font:{size:11}}}}},plugins:[D]});
   ligarDuploCliqueGrafico(document.getElementById('c10'),CHARTS.c10,hit=>{
     const cargo=gc[hit.index][0];
-    abrirGrupoGrafico('Cargo · '+cargo,FILT.filter(r=>r.cargo===cargo),r=>r.rTot,'Risco econômico');
+    abrirGrupoGrafico('Cargo · '+cargo,FILT.filter(r=>r.cargo===cargo),r=>r.vc,'Valor da causa');
   });
 
   // 11 lag demissao -> ajuizamento
@@ -1068,54 +1069,55 @@ function renderCharts(){
 
 /* ---------- alertas ---------- */
 function renderAlertas(){
+  const CUSTOS=baseCustos(FILT);
   const A=[]; const rt=S(FILT,'rTot');
   // concentração
-  const top=[...FILT].sort((a,b)=>b.rTot-a.rTot)[0];
+  const top=[...CUSTOS].sort((a,b)=>b.rTot-a.rTot)[0];
   if(top && rt>0 && top.rTot/rt>0.35){
     A.push({n:'crit',t:'Concentração de risco em um único processo',
       d:`${esc(top.reclamante)} responde por ${brl(top.rTot)}, equivalente a ${((top.rTot/rt)*100).toFixed(1)}% de toda a exposição da seleção. Qualquer variação nesse processo move o passivo consolidado.`,
       q:'Regra: participação individual acima de 35% do risco total', id:top.id});
   }
   // prognóstico provável com valor no bucket remoto
-  FILT.filter(r=>r.prog==='PROVÁVEL' && r.rRem>r.rPro).forEach(r=>{
+  CUSTOS.filter(r=>r.prog==='PROVÁVEL' && r.rRem>r.rPro).forEach(r=>{
     A.push({n:'crit',t:'Inconsistência de classificação contábil',
       d:`${esc(r.reclamante)} está marcado como PROVÁVEL, mas ${brl(r.rRem)} do seu risco estão lançados na coluna Remoto e apenas ${brl(r.rPro)} na coluna Provável. Se o valor migrar de bucket, a provisão contábil sobe nessa exata proporção. Vale confirmar com o escritório se a alocação está correta.`,
       q:'Regra: prognóstico provável com risco remoto maior que o provável', id:r.id});
   });
   // risco desproporcional ao valor da causa
-  FILT.filter(r=>r.vc>0 && r.rTot/r.vc>=3).sort((a,b)=>b.ratio-a.ratio).forEach(r=>{
+  CUSTOS.filter(r=>r.vc>0 && r.rTot/r.vc>=3).sort((a,b)=>b.ratio-a.ratio).forEach(r=>{
     A.push({n:'warn',t:'Risco desproporcional ao valor da causa',
       d:`${esc(r.reclamante)}: valor da causa ${brl(r.vc)} e risco econômico ${brl(r.rTot)} — ${r.ratio.toFixed(1)}x o pedido inicial. Indica obrigação de trato sucessivo, pensionamento ou condenação superveniente que ultrapassa a petição inicial.`,
       q:'Regra: risco econômico igual ou superior a 3x o valor da causa', id:r.id});
   });
   // execução
-  const ex=FILT.filter(r=>/execu/i.test(r.fase||''));
+  const ex=CUSTOS.filter(r=>/execu/i.test(r.fase||''));
   if(ex.length) A.push({n:'warn',t:'Processos em fase de execução',
     d:`${ex.length} processo(s) em execução, com desembolso iminente: ${ex.map(r=>esc(r.reclamante)).join('; ')}. Risco associado: ${brl(S(ex,'rTot'))}. Programar caixa e conferir se os depósitos recursais já feitos abatem o valor devido.`,
     q:'Regra: fase processual igual a execução'});
   // acordo/arquivamento pendente na carteira ativa
-  FILT.filter(r=>r.status==='Ativo' && /arquivamento dos autos|cumprimento do acordo|homologa[çc][ãa]o de acordo/i.test(r.andamento||'')).forEach(r=>{
+  CUSTOS.filter(r=>r.status==='Ativo' && /arquivamento dos autos|cumprimento do acordo|homologa[çc][ãa]o de acordo/i.test(r.andamento||'')).forEach(r=>{
     A.push({n:'info',t:'Processo ativo já com acordo cumprido ou arquivamento determinado',
       d:`${esc(r.reclamante)} continua na aba de ativos, mas o andamento registra acordo homologado ou determinação de arquivamento. Manter na carteira ativa infla o valor da causa em ${brl(r.vc)} sem exposição real.`,
       q:'Regra: andamento menciona acordo cumprido ou arquivamento, mas o processo está na aba de ativos', id:r.id});
   });
   // provável sem garantia
-  FILT.filter(r=>r.rPro>50000 && r.gar===0).forEach(r=>{
+  CUSTOS.filter(r=>r.rPro>50000 && r.gar===0).forEach(r=>{
     A.push({n:'info',t:'Risco provável relevante sem garantia depositada',
       d:`${esc(r.reclamante)} tem ${brl(r.rPro)} de risco provável e nenhum depósito ou garantia registrado no relatório. Confirmar se há exigência de garantia na fase atual.`,
       q:'Regra: risco provável acima de R$ 50.000,00 sem garantia informada', id:r.id});
   });
   // subsidiária
-  const sub=FILT.filter(r=>r.pedidos.includes('Responsabilidade subsidiária'));
+  const sub=CUSTOS.filter(r=>r.pedidos.includes('Responsabilidade subsidiária'));
   if(sub.length) A.push({n:'info',t:'Ações por responsabilidade subsidiária (terceirizados)',
     d:`${sub.length} processo(s) em que a Sonova figura por responsabilidade subsidiária de prestador. Valor da causa somado: ${brl(S(sub,'vc'))}, risco reconhecido: ${brl(S(sub,'rTot'))}. Esse é um risco de gestão de contrato, não de folha própria — exige checagem de idoneidade e retenção de garantias dos fornecedores.`,
     q:'Regra: objeto contém responsabilidade subsidiária'});
   // divergência entre o total declarado na planilha e a soma dos processos (layout mensal)
-  FONTES.filter(f=>f.layout==='B').forEach(f=>{
+  FONTES.filter(f=>Object.keys(f.totais||{}).length).forEach(f=>{
     const ultMes=f.meses[f.meses.length-1];
     const decl=((f.totais||{})[ultMes]||{}).total||0;
     const daAba=TODOS.filter(r=>r.fonte===f.fonte&&r.aba===f.aba);
-    const calc=S(daAba,'rTot');
+    const calc=S(daAba,'rTot',true);
     const dif=calc-decl;
     if(Math.abs(dif)<=1) return;
     const culpado=daAba.find(r=>Math.abs(r.rTot-Math.abs(dif))<1);
@@ -1126,7 +1128,7 @@ function renderAlertas(){
       q:'Regra: total declarado na planilha diferente da soma dos processos', id:culpado?culpado.id:null});
   });
   // processos que zeraram no último mês
-  const zerou=FILT.filter(r=>r.serie&&r.serie.length>1&&r.rTot===0&&r.serie[r.serie.length-2].tot>0);
+  const zerou=CUSTOS.filter(r=>r.serie&&r.serie.length>1&&r.rTot===0&&r.serie[r.serie.length-2].tot>0);
   if(zerou.length) A.push({n:'info',t:'Processos que saíram da contingência no último mês',
     d:`${zerou.length} processo(s) com valor envolvido zerado no mês de referência, tendo valor no mês anterior: ${zerou.map(r=>esc(r.reclamante)).join('; ')}. Confirmar se houve baixa, acordo ou apenas ausência de atualização.`,
     q:'Regra: valor zerado no último mês da série, com valor no mês anterior'});
@@ -1156,7 +1158,7 @@ function renderAlertas(){
 
   // agenda
   const ag=[];
-  FILT.forEach(r=>r.fut.forEach(f=>ag.push({d:parseData(f),rot:f,r})));
+  CUSTOS.forEach(r=>r.fut.forEach(f=>ag.push({d:parseData(f),rot:f,r})));
   ag.sort((a,b)=>a.d-b.d);
   document.getElementById('agenda').innerHTML = ag.length ? `<div class="tw"><table><thead><tr><th>Data</th><th>Reclamante</th><th>Processo</th><th>Fase</th><th>Risco</th></tr></thead><tbody>`+
     ag.map(a=>`<tr onclick="abrirFicha(${a.r.id})"><td><b>${a.rot}</b></td><td>${esc(a.r.reclamante)}</td><td>${esc(String(a.r.processo||'').split('\n')[0])}</td><td>${esc(a.r.fase)}</td><td class="num">${brl(a.r.rTot)}</td></tr>`).join('')+
@@ -1167,19 +1169,20 @@ function renderAlertas(){
 function renderCausaRaiz(){
   const pr={},pc={};
   FILT.forEach(r=>{
-    r.pedidos.forEach(p=>pc[p]=(pc[p]||0)+1);
-    Object.entries(riscoDistribuidoPorPedido(r)).forEach(([p,v])=>pr[p]=(pr[p]||0)+v);
+    const cats=r.pedidos.length?r.pedidos:['Sem pedido identificado'];
+    cats.forEach(p=>pc[p]=(pc[p]||0)+1);
+    Object.entries(causaDistribuidaPorPedido(r)).forEach(([p,v])=>pr[p]=(pr[p]||0)+v);
   });
   const linhas=Object.keys(pc).sort((a,b)=>pc[b]-pc[a]).map(p=>{
-    const proc=FILT.filter(r=>r.pedidos.includes(p));
+    const proc=FILT.filter(r=>r.pedidos.includes(p)||(p==='Sem pedido identificado'&&!r.pedidos.length));
     return `<tr class="pedido-linha" data-pedido="${esc(p)}" title="Dê duplo clique para ver os processos"><td>${esc(p)}</td><td class="num">${pc[p]}</td><td class="num">${((pc[p]/(FILT.length||1))*100).toFixed(0)}%</td><td class="num">${brl(pr[p]||0)}</td><td>${proc.slice(0,3).map(r=>esc(r.reclamante.split(' ')[0])).join(', ')}${proc.length>3?' +'+(proc.length-3):''}</td></tr>`;
   }).join('');
   document.getElementById('rootcause').innerHTML=`
     <h2>Matriz de pedidos</h2>
-    <div class="cs">Incidência e exposição distribuída por pedido. A soma da coluna de risco concilia com a contingência dos processos filtrados.</div>
-    <div class="tw"><table><thead><tr><th>Pedido</th><th>Processos</th><th>Incidência</th><th>Risco atribuído</th><th>Quem</th></tr></thead>
+    <div class="cs">Incidência e valor da causa distribuído por pedido. O rateio concilia com o total da causa, sem arquivados.</div>
+    <div class="tw"><table><thead><tr><th>Pedido</th><th>Processos</th><th>Incidência</th><th>Causa atribuída (rateio)</th><th>Quem</th></tr></thead>
     <tbody>${linhas||'<tr><td colspan="5" style="padding:16px;text-align:center;color:#646464">Sem dados.</td></tr>'}</tbody></table></div>
-    <div class="note">Dê duplo clique em uma linha para abrir os processos. Critério: quando a planilha informa o valor de cada pedido, o leitor utiliza esse detalhe. Quando há somente o campo Objeto, o risco total do processo é dividido igualmente entre as categorias identificadas.</div>`;
+    <div class="note">Dê duplo clique em uma linha para abrir os processos. Critério: rateio gerencial do valor da causa igualmente entre as categorias de pedido, sem usar valores de risco. Não representa o valor individual do pedido na petição; o último item recebe os centavos residuais.</div>`;
   document.querySelectorAll('#rootcause tr[data-pedido]').forEach(tr=>{
     tr.ondblclick=()=>abrirPedido(tr.dataset.pedido);
   });
@@ -1191,7 +1194,7 @@ function renderMetodologia(){
 `Fontes carregadas: ${[...new Set(TODOS.map(r=>r.fonte))].join(' | ')||'-'}
 Processos: ${TODOS.length} · ativos: ${ativos.length} · arquivados/encerrados: ${arq.length} · sem status explícito: ${TODOS.filter(r=>r.status==='Não informado').length}
 
-Os valores são lidos das colunas efetivamente reconhecidas no Excel. O leitor não presume empresa pela aba e não transforma risco zero em processo arquivado.
+Os valores são lidos das colunas efetivamente reconhecidas no Excel. O leitor não presume empresa pela aba e não transforma risco zero em processo arquivado. Abas nomeadas Arquivado/Encerrado e status explícitos de encerramento identificam processos fora dos totais financeiros; os valores originais são preservados para consulta.
 
 Conferência da seleção ativa:
   Remoto ............. ${brl(S(FILT,'rRem'))}
@@ -1199,7 +1202,7 @@ Conferência da seleção ativa:
   Possível (>50%) .... ${brl(S(FILT,'rPos50'))}
   Provável ........... ${brl(S(FILT,'rPro'))}
   Total .............. ${brl(S(FILT,'rTot'))}
-  Provisão sugerida .. ${brl(S(FILT,'prov'))}
+  Base provável ..... ${brl(S(FILT,'prov'))}
   Valor da causa ..... ${brl(S(FILT,'vc'))}
   Garantias .......... ${brl(S(FILT,'gar'))}
 
@@ -1227,15 +1230,15 @@ function ultimoAndamentoPedido(r){
   return {rot:u.rot||'Andamento',txt:txt.length>280?txt.slice(0,277)+'…':txt};
 }
 
-function abrirGrupoGrafico(titulo,registros,valorFn=r=>r.rTot,rotuloValor='Risco econômico'){
+function abrirGrupoGrafico(titulo,registros,valorFn=r=>r.vc,rotuloValor='Valor da causa'){
   PEDIDO_MODAL_ATUAL=null;
   const casos=[...registros].map(r=>({
-    r,atr:Math.max(0,Number(valorFn(r))||0),ult:ultimoAndamentoPedido(r)
-  })).sort((a,b)=>b.atr-a.atr||b.r.rTot-a.r.rTot);
+    r,atr:compoeCustos(r)?Math.max(0,Number(valorFn(r))||0):0,ult:ultimoAndamentoPedido(r)
+  })).sort((a,b)=>b.atr-a.atr||b.r.vc-a.r.vc);
   const valorSelecionado=casos.reduce((s,x)=>s+x.atr,0);
-  const riscoCasos=casos.reduce((s,x)=>s+x.r.rTot,0);
-  const valorCausa=casos.reduce((s,x)=>s+x.r.vc,0);
-  const provisao=casos.reduce((s,x)=>s+x.r.prov,0);
+  const causaCasos=S(casos.map(x=>x.r),'vc');
+  const valorCausa=causaCasos;
+  const arquivados=casos.filter(x=>!compoeCustos(x.r)).length;
 
   document.getElementById('modal').innerHTML=`
   <div class="mh">
@@ -1247,22 +1250,22 @@ function abrirGrupoGrafico(titulo,registros,valorFn=r=>r.rTot,rotuloValor='Risco
     <div class="rk">
       <div class="b"><div class="k">Processos</div><div class="v">${casos.length}</div></div>
       <div class="b"><div class="k">${esc(rotuloValor)}</div><div class="v">${brl(valorSelecionado)}</div></div>
-      <div class="b"><div class="k">Risco total dos casos</div><div class="v">${brl(riscoCasos)}</div></div>
-      <div class="b"><div class="k">Provisão dos casos</div><div class="v">${brl(provisao)}</div></div>
+      <div class="b"><div class="k">Valor da causa dos casos</div><div class="v">${brl(causaCasos)}</div></div>
+      <div class="b"><div class="k">Arquivados na consulta</div><div class="v">${arquivados}</div></div>
     </div>
     <div class="tw"><table>
-      <thead><tr><th>Reclamante / processo</th><th>Fase</th><th>Prognóstico</th><th>${esc(rotuloValor)}</th><th>Risco do processo</th><th>Último andamento</th><th></th></tr></thead>
+      <thead><tr><th>Reclamante / processo</th><th>Fase</th><th>Prognóstico</th><th>${esc(rotuloValor)}</th><th>Valor da causa original</th><th>Último andamento</th><th></th></tr></thead>
       <tbody>${casos.map(x=>`<tr class="pedido-linha" ondblclick="abrirFicha(${x.r.id})" title="Dê duplo clique para abrir a ficha completa">
         <td><b>${esc(x.r.reclamante)}</b><div style="font-size:11px;color:var(--mu);margin-top:2px">${esc(String(x.r.processo||'-').replace(/\n+/g,' | '))}</div></td>
         <td>${esc(x.r.fase)}</td>
         <td><span class="tag ${tagCls(x.r.prog)}">${esc(x.r.prog)}</span><div style="font-size:10.5px;color:var(--mu);margin-top:4px">${esc(x.r.status)}</div></td>
         <td class="num"><b>${brl(x.atr)}</b></td>
-        <td class="num">${brl(x.r.rTot)}</td>
+        <td class="num">${brl(x.r.vc)}</td>
         <td class="andamento"><b>${esc(x.ult.rot)}</b>${esc(x.ult.txt)}</td>
         <td><button class="ver-ficha" onclick="event.stopPropagation();abrirFicha(${x.r.id})">Ver ficha</button></td>
       </tr>`).join('')||'<tr><td colspan="7" style="padding:18px;text-align:center;color:#646464">Nenhum processo encontrado nos filtros atuais.</td></tr>'}</tbody>
     </table></div>
-    <div class="note">Valor da causa dos processos exibidos: ${brl(valorCausa)}. A ficha completa apresenta objeto, condenação, garantias e toda a linha do tempo.</div>
+    <div class="note">Valor da causa dos processos exibidos, sem arquivados: ${brl(valorCausa)}. Arquivados não compõem os totais; seus valores originais são históricos. A ficha completa apresenta objeto, condenação, garantias e toda a linha do tempo.</div>
   </div>`;
   document.getElementById('ov').classList.add('on');
   document.body.style.overflow='hidden';
@@ -1271,12 +1274,12 @@ function abrirGrupoGrafico(titulo,registros,valorFn=r=>r.rTot,rotuloValor='Risco
 function abrirPedido(pedido){
   if(!pedido)return;
   PEDIDO_MODAL_ATUAL=pedido;
-  const casos=FILT.filter(r=>r.pedidos.includes(pedido)).map(r=>({
-    r,atr:riscoDistribuidoPorPedido(r)[pedido]||0,ult:ultimoAndamentoPedido(r)
-  })).sort((a,b)=>b.atr-a.atr||b.r.rTot-a.r.rTot);
-  const riscoAtribuido=casos.reduce((s,x)=>s+x.atr,0);
-  const riscoCasos=casos.reduce((s,x)=>s+x.r.rTot,0);
-  const provisao=casos.reduce((s,x)=>s+x.r.prov,0);
+  const casos=FILT.filter(r=>r.pedidos.includes(pedido)||(pedido==='Sem pedido identificado'&&!r.pedidos.length)).map(r=>({
+    r,atr:causaDistribuidaPorPedido(r)[pedido]||0,ult:ultimoAndamentoPedido(r)
+  })).sort((a,b)=>b.atr-a.atr||b.r.vc-a.r.vc);
+  const causaAtribuida=casos.reduce((s,x)=>s+x.atr,0);
+  const causaCasos=S(casos.map(x=>x.r),'vc');
+  const arquivados=casos.filter(x=>!compoeCustos(x.r)).length;
 
   document.getElementById('modal').innerHTML=`
   <div class="mh">
@@ -1287,23 +1290,23 @@ function abrirPedido(pedido){
   <div class="mb">
     <div class="rk">
       <div class="b"><div class="k">Processos</div><div class="v">${casos.length}</div></div>
-      <div class="b"><div class="k">Risco atribuído</div><div class="v">${brl(riscoAtribuido)}</div></div>
-      <div class="b"><div class="k">Risco total dos casos</div><div class="v">${brl(riscoCasos)}</div></div>
-      <div class="b"><div class="k">Provisão dos casos</div><div class="v">${brl(provisao)}</div></div>
+      <div class="b"><div class="k">Causa atribuída (rateio)</div><div class="v">${brl(causaAtribuida)}</div></div>
+      <div class="b"><div class="k">Valor da causa dos casos</div><div class="v">${brl(causaCasos)}</div></div>
+      <div class="b"><div class="k">Arquivados na consulta</div><div class="v">${arquivados}</div></div>
     </div>
     <div class="tw"><table>
-      <thead><tr><th>Reclamante / processo</th><th>Fase</th><th>Prognóstico</th><th>Risco atribuído</th><th>Risco do processo</th><th>Último andamento</th><th></th></tr></thead>
+      <thead><tr><th>Reclamante / processo</th><th>Fase</th><th>Prognóstico</th><th>Causa atribuída (rateio)</th><th>Valor da causa original</th><th>Último andamento</th><th></th></tr></thead>
       <tbody>${casos.map(x=>`<tr class="pedido-linha" ondblclick="abrirFicha(${x.r.id},true)" title="Dê duplo clique para abrir a ficha completa">
         <td><b>${esc(x.r.reclamante)}</b><div style="font-size:11px;color:var(--mu);margin-top:2px">${esc(String(x.r.processo||'-').replace(/\n+/g,' | '))}</div></td>
         <td>${esc(x.r.fase)}</td>
         <td><span class="tag ${tagCls(x.r.prog)}">${esc(x.r.prog)}</span><div style="font-size:10.5px;color:var(--mu);margin-top:4px">${esc(x.r.status)}</div></td>
         <td class="num"><b>${brl(x.atr)}</b></td>
-        <td class="num">${brl(x.r.rTot)}</td>
+        <td class="num">${brl(x.r.vc)}</td>
         <td class="andamento"><b>${esc(x.ult.rot)}</b>${esc(x.ult.txt)}</td>
         <td><button class="ver-ficha" onclick="event.stopPropagation();abrirFicha(${x.r.id},true)">Ver ficha</button></td>
       </tr>`).join('')||'<tr><td colspan="7" style="padding:18px;text-align:center;color:#646464">Nenhum processo encontrado para este pedido nos filtros atuais.</td></tr>'}</tbody>
     </table></div>
-    <div class="note">Risco atribuído é a parcela do processo associada a este pedido. Risco do processo mostra a exposição integral do caso. A ficha completa apresenta objeto, condenação, garantias e toda a linha do tempo.</div>
+    <div class="note">Causa atribuída é um rateio gerencial igual entre as categorias de pedido; não é o valor individual do pedido na petição. A soma reconcilia com o valor da causa de cada processo, sem usar risco econômico. Arquivados não compõem os totais; seus valores originais são históricos. A ficha completa apresenta objeto, condenação, garantias e toda a linha do tempo.</div>
   </div>`;
   document.getElementById('ov').classList.add('on');
   document.body.style.overflow='hidden';
@@ -1312,7 +1315,7 @@ function abrirPedido(pedido){
 function abrirFicha(id,voltarAoPedido=false){
   if(!voltarAoPedido)PEDIDO_MODAL_ATUAL=null;
   const r=TODOS.find(x=>x.id===id); if(!r) return;
-  const cls=r.prog==='PROVÁVEL'?'t-prov':r.prog==='POSSÍVEL'?'t-poss':'t-rem';
+  const cls=tagCls(r.prog);
   const evs=[...r.evs].sort((a,b)=>{
     if(!a.data) return -1; if(!b.data) return 1; return a.data-b.data;});
   document.getElementById('modal').innerHTML=`
@@ -1325,6 +1328,7 @@ function abrirFicha(id,voltarAoPedido=false){
     </div>
   </div>
   <div class="mb">
+    ${!compoeCustos(r)?'<div class="note" style="margin:0 0 14px">Processo arquivado / sem risco atual. Os valores abaixo são históricos da planilha e não compõem os totais financeiros. Prognóstico original: '+esc(r.progOriginal)+'.</div>':''}
     <div class="rk">
       <div class="b"><div class="k">Valor da causa</div><div class="v">${brl(r.vc)}</div></div>
       <div class="b"><div class="k">Risco econômico</div><div class="v">${brl(r.rTot)}</div></div>
@@ -1361,8 +1365,12 @@ function abrirFicha(id,voltarAoPedido=false){
         <td><span class="tag ${tagCls(String(p.perda).toUpperCase())}">${esc(p.perda)}</span></td>
         <td class="num">${brl(p.valor)}</td></tr>`).join('')}</tbody></table></div></div>`:''}
 
-    ${r.serie&&r.serie.length?`<div class="sec"><h4>Evolução do valor envolvido</h4>
+    ${r.serie&&r.serie.some(x=>x.vc!=null)?`<div class="sec"><h4>Evolução do valor da causa</h4>
       <div class="chartbox" style="height:190px"><canvas id="cf"></canvas></div></div>`:''}
+    ${r.serie&&r.serie.length?`<div class="sec"><h4>Histórico original de contingência</h4><div class="tw"><table>
+      <thead><tr><th>Mês</th><th>Provável</th><th>Possível (&lt;50%)</th><th>Possível (&gt;50%)</th><th>Remoto</th><th>Total original</th></tr></thead>
+      <tbody>${r.serie.map(x=>`<tr><td>${esc(x.mes)}</td><td class="num">${brl(x.pro)}</td><td class="num">${brl(x.pos)}</td><td class="num">${brl(x.pos50)}</td><td class="num">${brl(x.rem)}</td><td class="num">${brl(x.tot)}</td></tr>`).join('')}</tbody>
+    </table></div></div>`:''}
 
     <div class="sec"><h4>Pedidos identificados</h4>
       <div class="chips">${r.pedidos.map(p=>`<span class="chip">${esc(p)}</span>`).join('')}</div>
@@ -1391,7 +1399,7 @@ function abrirFicha(id,voltarAoPedido=false){
   if(r.serie&&r.serie.length&&document.getElementById('cf')){
     if(CHARTS.cf) CHARTS.cf.destroy();
     CHARTS.cf=new Chart(document.getElementById('cf'),{type:'line',
-      data:{labels:r.serie.map(s=>s.mes),datasets:[{data:r.serie.map(s=>s.tot),borderColor:corProg(r.prog),
+      data:{labels:r.serie.filter(s=>s.vc!=null).map(s=>s.mes),datasets:[{label:'Valor da causa',data:r.serie.filter(s=>s.vc!=null).map(s=>s.vc),borderColor:C.p,
         backgroundColor:'rgba(0,131,202,.10)',fill:true,tension:.25,pointRadius:0,borderWidth:1.8}]},
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false},datalabels:{display:false},
@@ -1431,7 +1439,7 @@ const ALIASES={
   riscoTotal:['risco economico','risco economico total','risco total','exposicao total','contingencia total','valor envolvido total'],
   prognostico:['prognostico','prognostico de perda','classificacao de risco','probabilidade','chance de perda'],
   andamento:['andamento','andamentos','historico','historico processual','ultima movimentacao','movimentacao','status atual'],
-  condenacao:['condenacao','decisao','sentenca','resultado'],
+  condenacao:['condenacao','condenção','condencao','decisao','sentenca','resultado'],
   garantia:['garantia','garantias','deposito recursal','depositos','custas','valor depositado'],
   arquivamento:['arquivamento','data de arquivamento','data do arquivamento','data encerramento'],
   status:['situacao','status','situacao do processo','processo ativo','ativo arquivado'],
@@ -1454,6 +1462,8 @@ function mapearCabecalho(v){
   const n=normCab(v); if(!n) return null;
   if(MAPA_EXATO[n]) return MAPA_EXATO[n];
   const nt=n.split(' ').filter(Boolean);
+  // Cabeçalho genérico não identifica uma coluna jurídica específica.
+  if(nt.length<2)return null;
   if(n.length>90||nt.length>12) return null; // texto de andamento não pode virar cabeçalho
   let melhor=null,score=0;
   Object.entries(ALIASES).forEach(([k,arr])=>arr.forEach(a=>{
@@ -1521,6 +1531,7 @@ function analisarAba(aoa){
   const cabBlocos=candidatos.filter(c=>c.campos.includes('objeto')&&c.campos.includes('possibilidadePerda')&&c.campos.includes('valorAtualizado'));
   let tipo=null;
   if(melhor&&melhor.mensalLong) tipo='MENSAL_LINHAS';
+  else if(melhor&&melhor.identidade>0&&melhor.campos.includes('valorCausa')&&melhor.campos.includes('riscoTotal')) tipo='TABELA';
   else if(linhaMes&&blocos.length) tipo='MENSAL_BLOCOS';
   else if(cabBlocos.length>=2) tipo='BLOCOS_SIMPLES';
   else if(melhor&&melhor.identidade>0&&melhor.campos.length>=3) tipo='TABELA';
@@ -1576,8 +1587,9 @@ function parseMensalLinhas(aoa,diag,aba,fonte,info){
     const key=[item.processo,item.cpj,item.reclamante,item.reclamada].map(x=>normCab(x)).join('|');
     if(!grupos.has(key))grupos.set(key,{meta:item,meses:new Map(),pedidos:[]});
     const g=grupos.get(key); Object.entries(item).forEach(([k,v])=>{if(v!==''&&v!=null&&!g.meta[k])g.meta[k]=v;});
-    if(!g.meses.has(mi.key))g.meses.set(mi.key,{mes:mi.label,rem:0,pos:0,pos50:0,pro:0,outro:0,det:[]});
+    if(!g.meses.has(mi.key))g.meses.set(mi.key,{mes:mi.label,vc:null,rem:0,pos:0,pos50:0,pro:0,outro:0,det:[]});
     const s=g.meses.get(mi.key),b=bucketDe(item.possibilidadePerda),v=parseNum(item.valorAtualizado);
+    if(s.vc==null&&item.valorCausa!=null&&String(item.valorCausa).trim()!=='')s.vc=parseNum(item.valorCausa);
     if(b&&['rem','pos','pos50','pro'].includes(b))s[b]+=v;else s.outro+=v;
     const ped=String(item.objeto||'').trim();if(ped){g.pedidos.push(ped);s.det.push({pedido:ped,perda:String(item.possibilidadePerda||'-'),valor:v});}
   }
@@ -1585,7 +1597,7 @@ function parseMensalLinhas(aoa,diag,aba,fonte,info){
     const serie=[...g.meses.entries()].sort((a,b)=>a[0]-b[0]).map(x=>{const s=x[1];s.tot=s.rem+s.pos+s.pos50+s.pro+s.outro;return s;});
     const cur=serie[serie.length-1]||{rem:0,pos:0,pos50:0,pro:0,tot:0,det:[]};
     const m=g.meta;
-    rows.push({...m,aba,fonte,layout:'MENSAL_LINHAS',objeto:[...new Set(g.pedidos)].join(', '),status:statusOriginal(m.status),
+    rows.push({...m,aba,fonte,layout:'MENSAL_LINHAS',valorCausa:cur.vc, objeto:[...new Set(g.pedidos)].join(', '),status:statusOriginal(m.status),
       riscoRemoto:cur.rem,riscoPossivel:cur.pos,riscoPossivel50:cur.pos50,riscoProvavel:cur.pro,riscoTotal:cur.tot,
       prognostico:String(m.prognostico||'').trim()||progDosValores(cur),serie:serie.map(({det,...x})=>x),pedidosDet:cur.det});
   });
@@ -1675,7 +1687,7 @@ function parseMensalBlocos(aoa,diag,aba,fonte,info){
     const nome=String(meta.reclamante||'').trim();const proc=String(meta.processo||'').trim();if(!nome&&!proc)return;
     rows.push({aba,fonte,layout:'MENSAL_BLOCOS',cpj:meta.cpj||'-',reclamante:nome||'(sem reclamante informado)',processo:proc,
       reclamada:meta.reclamada||'Não informada',cargo:meta.cargo||'N/A',fase:meta.fase||'Não informada',foro:meta.foro||'',
-      objeto:[...new Set(det.map(d=>d.pedido).filter(Boolean))].join(', '),andamento:meta.andamento||'',condenacao:'',garantia:'',valorCausa:0,
+      objeto:[...new Set(det.map(d=>d.pedido).filter(Boolean))].join(', '),andamento:meta.andamento||'',condenacao:'',garantia:meta.garantia||'',valorCausa:meta.valorCausa??null,
       riscoRemoto:cur.rem,riscoPossivel:cur.pos,riscoPossivel50:cur.pos50,riscoProvavel:cur.pro,riscoTotal:cur.tot,
       prognostico:meta.prognostico||progDosValores(cur),status:statusOriginal(meta.status),serie,
       pedidosDet:det.filter(d=>d.pedido).map(d=>{const x=d.porMes[ult]||{};return {pedido:d.pedido,perda:x.perda||'-',valor:x.v||0};}),extras});
@@ -1703,6 +1715,8 @@ function consolidarDuplicados(lista){
     const m={...prim,extras:{...(sec.extras||{}),...(prim.extras||{})}};
     ['cpj','reclamante','processo','reclamada','terceiro','cargo','fase','foro','objeto','andamento','condenacao','garantia','status','admissao','demissao','distribuicao','arquivamento'].forEach(f=>{if(!String(m[f]||'').trim()||m[f]==='Não informado'||m[f]==='Não informada'||m[f]==='N/A')m[f]=sec[f];});
     if((sec.serie||[]).length>(m.serie||[]).length)m.serie=sec.serie;
+    if(m.valorCausa==null||String(m.valorCausa).trim()==='')m.valorCausa=sec.valorCausa;
+    if(registroArquivado(prim)||registroArquivado(sec))m.status='Arquivado';
     m.objeto=[...new Set([...(String(prim.objeto||'').split(', ')),...(String(sec.objeto||'').split(', '))].filter(Boolean))].join(', ');
     m.extras['Abas de origem']=[...new Set([prim.aba,sec.aba,String((prim.extras||{})['Abas de origem']||'').split(' | '),String((sec.extras||{})['Abas de origem']||'').split(' | ')].flat().filter(Boolean))].join(' | ');
     mapa.set(k,m);
@@ -1714,7 +1728,7 @@ function parseWorkbook(buf,nomeArquivo){
   const wb=XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true,cellFormula:true,cellNF:true});
   const rows=[],fontes=[],info={mapeadas:new Set(),novas:new Set(),abas:[],ignoradas:[],diagnosticos:[]};
   wb.SheetNames.forEach(aba=>{
-    const aoa=XLSX.utils.sheet_to_json(wb.Sheets[aba],{header:1,defval:'',raw:false,dateNF:'yyyy-mm-dd',blankrows:true});
+    const aoa=XLSX.utils.sheet_to_json(wb.Sheets[aba],{header:1,defval:'',raw:true,dateNF:'yyyy-mm-dd',blankrows:true});
     const diag=analisarAba(aoa);info.diagnosticos.push({aba,tipo:diag.tipo,linha:diag.melhor?diag.melhor.row+1:null,campos:diag.melhor?diag.melhor.campos:[]});
     if(!diag.tipo){info.ignoradas.push(aba+' (nenhum conjunto mínimo de campos encontrado em '+diag.area.rows+' linhas × '+diag.area.cols+' colunas)');return;}
     if(diag.tipo==='TABELA'){
@@ -1786,7 +1800,10 @@ function exportar(){
     'Tempo de casa (dias)':r.casa,'Distribuição':dbr(r.dDist),'Demissão→ajuizamento (dias)':r.lag,
     'Processo':String(r.processo||'').replace(/\n+/g,' | '),'Fase':r.fase,'Regional':r.trt,'Foro':r.foro,
     'Valor da causa':r.vc,'Risco remoto':r.rRem,'Risco possível (<50%)':r.rPos,'Risco possível (>50%)':r.rPos50,'Risco provável':r.rPro,
-    'Risco econômico':r.rTot,'Provisão sugerida':r.prov,'Risco/Causa (x)':Number(r.ratio.toFixed(2)),'Prognóstico':r.prog,
+    'Risco econômico':r.rTot,'Base de provisão (somente provável)':r.prov,
+    'Compõe totais financeiros':compoeCustos(r)?'Sim':'Não — arquivado',
+    'Valor da causa no controle':compoeCustos(r)?r.vc:0,'Valor provável no controle':compoeCustos(r)?r.rPro:0,
+    'Prognóstico original':r.progOriginal,'Risco/Causa (x)':Number(r.ratio.toFixed(2)),'Prognóstico':r.prog,
     'Garantias (R$)':r.gar,'Pedidos':r.pedidos.join('; '),'Situação':r.status,
     'Arquivamento':r.dArq?dbr(r.dArq):'','Objeto':r.objeto,'Condenação':r.condenacao,'Andamento':r.andamento,
     ...(r.extras||{})
